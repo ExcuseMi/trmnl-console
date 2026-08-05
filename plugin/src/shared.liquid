@@ -1,0 +1,1469 @@
+{% template content %}
+<style>
+    @font-face {
+        font-family: Departure Mono;
+        src: url(https://capypara.de/trmnl-console/depature-mono/DepartureMono-Regular.woff2) format("woff2"),
+        url(https://capypara.de/trmnl-console/depature-mono/DepartureMono-Regular.woff) format("woff"),
+        url(https://capypara.de/trmnl-console/depature-mono/DepartureMono-Regular.otf) format("opentype");
+    }
+
+    .trmnl-console {
+        font-family: Departure Mono, monospace;
+        font-size: 11px;
+    }
+
+    .trmnl-console.tc--x2 {
+        font-size: 22px;
+    }
+
+    .trmnl-console.tc--x3 {
+        font-size: 33px;
+    }
+
+    .trmnl-console.tc--x4 {
+        font-size: 44px;
+    }
+
+    .trmnl-console.tc--x5 {
+        font-size: 55px;
+    }
+
+    .trmnl-console.tc--x6 {
+        font-size: 66px;
+    }
+
+    .trmnl-console.tc--x7 {
+        font-size: 77px;
+    }
+
+    .trmnl-console.tc--x8 {
+        font-size: 88px;
+    }
+
+    .trmnl-console.tc--x9 {
+        font-size: 99px;
+    }
+
+    /*
+     * Terminal cell colors.
+     *
+     * The tc--fg-<n> / tc--bg-<n> classes carry xterm 256-color palette
+     * indices (see the SBuffer-to-HTML spec in cli-client/src/sbuffer.rs).
+     * Each index is mapped to the perceptually nearest TRMNL framework color
+     * token and painted through the framework-owned --text-<token>-* /
+     * --bg-<token>-* variables, so the screen-mode engine takes care of
+     * reduced-palette and dithered 1-bit/2-bit rendering automatically.
+     * Note that the default (unstyled) cell is black-on-white.
+     *
+     * The rules below are generated; regenerate with bin/gen-ansi-colors.py.
+     *
+     * A span may combine a fg and a bg color, so the paint follows the
+     * framework's composed bg+text pattern (_text.scss): the bg fill rides
+     * background-color plus a border-box image layer, while the text ink is
+     * an image layer clipped to the glyphs with its light tone on a gradient
+     * layer under it.
+     */
+    .trmnl-console span {
+        color: var(--tc-fg-color, inherit);
+        background-color: var(--tc-bg-color, transparent);
+        background-image: var(--tc-fg-image, none), linear-gradient(var(--tc-fg-under, transparent), var(--tc-fg-under, transparent)), var(--tc-bg-image, none);
+        background-repeat: repeat, repeat, repeat;
+        background-size: var(--dither-bg-size, auto), auto, var(--dither-bg-size, auto);
+        -webkit-background-clip: var(--tc-fg-clip, border-box), var(--tc-fg-clip, border-box), border-box;
+        background-clip: var(--tc-fg-clip, border-box), var(--tc-fg-clip, border-box), border-box;
+    }
+
+    .tc--fg-0, .tc--fg-16 {
+        --tc-fg-color: var(--text-black-color, var(--black));
+        --tc-fg-image: var(--text-black-image, none);
+        --tc-fg-clip: var(--text-black-clip, border-box);
+        --tc-fg-under: var(--text-black-under, transparent);
+    }
+
+    .tc--fg-1, .tc--fg-88 {
+        --tc-fg-color: var(--text-red-25-color, var(--red-25));
+        --tc-fg-image: var(--text-red-25-image, none);
+        --tc-fg-clip: var(--text-red-25-clip, border-box);
+        --tc-fg-under: var(--text-red-25-under, transparent);
+    }
+
+    .tc--fg-2, .tc--fg-28 {
+        --tc-fg-color: var(--text-green-25-color, var(--green-25));
+        --tc-fg-image: var(--text-green-25-image, none);
+        --tc-fg-clip: var(--text-green-25-clip, border-box);
+        --tc-fg-under: var(--text-green-25-under, transparent);
+    }
+
+    .tc--fg-3, .tc--fg-100, .tc--fg-136 {
+        --tc-fg-color: var(--text-yellow-25-color, var(--yellow-25));
+        --tc-fg-image: var(--text-yellow-25-image, none);
+        --tc-fg-clip: var(--text-yellow-25-clip, border-box);
+        --tc-fg-under: var(--text-yellow-25-under, transparent);
+    }
+
+    .tc--fg-4, .tc--fg-18 {
+        --tc-fg-color: var(--text-blue-25-color, var(--blue-25));
+        --tc-fg-image: var(--text-blue-25-image, none);
+        --tc-fg-clip: var(--text-blue-25-clip, border-box);
+        --tc-fg-under: var(--text-blue-25-under, transparent);
+    }
+
+    .tc--fg-5, .tc--fg-90, .tc--fg-91 {
+        --tc-fg-color: var(--text-purple-25-color, var(--purple-25));
+        --tc-fg-image: var(--text-purple-25-image, none);
+        --tc-fg-clip: var(--text-purple-25-clip, border-box);
+        --tc-fg-under: var(--text-purple-25-under, transparent);
+    }
+
+    .tc--fg-6, .tc--fg-29, .tc--fg-30, .tc--fg-31 {
+        --tc-fg-color: var(--text-cyan-25-color, var(--cyan-25));
+        --tc-fg-image: var(--text-cyan-25-image, none);
+        --tc-fg-clip: var(--text-cyan-25-clip, border-box);
+        --tc-fg-under: var(--text-cyan-25-under, transparent);
+    }
+
+    .tc--fg-7, .tc--fg-146, .tc--fg-180, .tc--fg-181, .tc--fg-250 {
+        --tc-fg-color: var(--text-gray-60-color, var(--gray-60));
+        --tc-fg-image: var(--text-gray-60-image, none);
+        --tc-fg-clip: var(--text-gray-60-clip, border-box);
+        --tc-fg-under: var(--text-gray-60-under, transparent);
+    }
+
+    .tc--fg-8, .tc--fg-67, .tc--fg-101, .tc--fg-102, .tc--fg-103, .tc--fg-137, .tc--fg-244, .tc--fg-245 {
+        --tc-fg-color: var(--text-gray-45-color, var(--gray-45));
+        --tc-fg-image: var(--text-gray-45-image, none);
+        --tc-fg-clip: var(--text-gray-45-clip, border-box);
+        --tc-fg-under: var(--text-gray-45-under, transparent);
+    }
+
+    .tc--fg-9, .tc--fg-196 {
+        --tc-fg-color: var(--text-red-color, var(--red));
+        --tc-fg-image: var(--text-red-image, none);
+        --tc-fg-clip: var(--text-red-clip, border-box);
+        --tc-fg-under: var(--text-red-under, transparent);
+    }
+
+    .tc--fg-10, .tc--fg-46 {
+        --tc-fg-color: var(--text-green-color, var(--green));
+        --tc-fg-image: var(--text-green-image, none);
+        --tc-fg-clip: var(--text-green-clip, border-box);
+        --tc-fg-under: var(--text-green-under, transparent);
+    }
+
+    .tc--fg-11, .tc--fg-226 {
+        --tc-fg-color: var(--text-yellow-color, var(--yellow));
+        --tc-fg-image: var(--text-yellow-image, none);
+        --tc-fg-clip: var(--text-yellow-clip, border-box);
+        --tc-fg-under: var(--text-yellow-under, transparent);
+    }
+
+    .tc--fg-12, .tc--fg-21 {
+        --tc-fg-color: var(--text-blue-color, var(--blue));
+        --tc-fg-image: var(--text-blue-image, none);
+        --tc-fg-clip: var(--text-blue-clip, border-box);
+        --tc-fg-under: var(--text-blue-under, transparent);
+    }
+
+    .tc--fg-13, .tc--fg-201 {
+        --tc-fg-color: var(--text-purple-color, var(--purple));
+        --tc-fg-image: var(--text-purple-image, none);
+        --tc-fg-clip: var(--text-purple-clip, border-box);
+        --tc-fg-under: var(--text-purple-under, transparent);
+    }
+
+    .tc--fg-14, .tc--fg-50, .tc--fg-51 {
+        --tc-fg-color: var(--text-cyan-color, var(--cyan));
+        --tc-fg-image: var(--text-cyan-image, none);
+        --tc-fg-clip: var(--text-cyan-clip, border-box);
+        --tc-fg-under: var(--text-cyan-under, transparent);
+    }
+
+    .tc--fg-15, .tc--fg-231 {
+        --tc-fg-color: var(--text-white-color, var(--white));
+        --tc-fg-image: var(--text-white-image, none);
+        --tc-fg-clip: var(--text-white-clip, border-box);
+        --tc-fg-under: var(--text-white-under, transparent);
+    }
+
+    .tc--fg-17 {
+        --tc-fg-color: var(--text-blue-20-color, var(--blue-20));
+        --tc-fg-image: var(--text-blue-20-image, none);
+        --tc-fg-clip: var(--text-blue-20-clip, border-box);
+        --tc-fg-under: var(--text-blue-20-under, transparent);
+    }
+
+    .tc--fg-19 {
+        --tc-fg-color: var(--text-blue-30-color, var(--blue-30));
+        --tc-fg-image: var(--text-blue-30-image, none);
+        --tc-fg-clip: var(--text-blue-30-clip, border-box);
+        --tc-fg-under: var(--text-blue-30-under, transparent);
+    }
+
+    .tc--fg-20 {
+        --tc-fg-color: var(--text-blue-35-color, var(--blue-35));
+        --tc-fg-image: var(--text-blue-35-image, none);
+        --tc-fg-clip: var(--text-blue-35-clip, border-box);
+        --tc-fg-under: var(--text-blue-35-under, transparent);
+    }
+
+    .tc--fg-22 {
+        --tc-fg-color: var(--text-green-20-color, var(--green-20));
+        --tc-fg-image: var(--text-green-20-image, none);
+        --tc-fg-clip: var(--text-green-20-clip, border-box);
+        --tc-fg-under: var(--text-green-20-under, transparent);
+    }
+
+    .tc--fg-23, .tc--fg-24, .tc--fg-25 {
+        --tc-fg-color: var(--text-cyan-20-color, var(--cyan-20));
+        --tc-fg-image: var(--text-cyan-20-image, none);
+        --tc-fg-clip: var(--text-cyan-20-clip, border-box);
+        --tc-fg-under: var(--text-cyan-20-under, transparent);
+    }
+
+    .tc--fg-26, .tc--fg-27, .tc--fg-62, .tc--fg-63 {
+        --tc-fg-color: var(--text-blue-55-color, var(--blue-55));
+        --tc-fg-image: var(--text-blue-55-image, none);
+        --tc-fg-clip: var(--text-blue-55-clip, border-box);
+        --tc-fg-under: var(--text-blue-55-under, transparent);
+    }
+
+    .tc--fg-32, .tc--fg-33, .tc--fg-68, .tc--fg-69, .tc--fg-98, .tc--fg-99, .tc--fg-105 {
+        --tc-fg-color: var(--text-blue-60-color, var(--blue-60));
+        --tc-fg-image: var(--text-blue-60-image, none);
+        --tc-fg-clip: var(--text-blue-60-clip, border-box);
+        --tc-fg-under: var(--text-blue-60-under, transparent);
+    }
+
+    .tc--fg-34 {
+        --tc-fg-color: var(--text-green-30-color, var(--green-30));
+        --tc-fg-image: var(--text-green-30-image, none);
+        --tc-fg-clip: var(--text-green-30-clip, border-box);
+        --tc-fg-under: var(--text-green-30-under, transparent);
+    }
+
+    .tc--fg-35, .tc--fg-70, .tc--fg-71 {
+        --tc-fg-color: var(--text-lime-30-color, var(--lime-30));
+        --tc-fg-image: var(--text-lime-30-image, none);
+        --tc-fg-clip: var(--text-lime-30-clip, border-box);
+        --tc-fg-under: var(--text-lime-30-under, transparent);
+    }
+
+    .tc--fg-36, .tc--fg-37, .tc--fg-38, .tc--fg-72, .tc--fg-73, .tc--fg-74 {
+        --tc-fg-color: var(--text-cyan-30-color, var(--cyan-30));
+        --tc-fg-image: var(--text-cyan-30-image, none);
+        --tc-fg-clip: var(--text-cyan-30-clip, border-box);
+        --tc-fg-under: var(--text-cyan-30-under, transparent);
+    }
+
+    .tc--fg-39, .tc--fg-75, .tc--fg-104, .tc--fg-111, .tc--fg-140 {
+        --tc-fg-color: var(--text-blue-65-color, var(--blue-65));
+        --tc-fg-image: var(--text-blue-65-image, none);
+        --tc-fg-clip: var(--text-blue-65-clip, border-box);
+        --tc-fg-under: var(--text-blue-65-under, transparent);
+    }
+
+    .tc--fg-40 {
+        --tc-fg-color: var(--text-green-35-color, var(--green-35));
+        --tc-fg-image: var(--text-green-35-image, none);
+        --tc-fg-clip: var(--text-green-35-clip, border-box);
+        --tc-fg-under: var(--text-green-35-under, transparent);
+    }
+
+    .tc--fg-41, .tc--fg-42, .tc--fg-76, .tc--fg-77, .tc--fg-78, .tc--fg-112, .tc--fg-113 {
+        --tc-fg-color: var(--text-lime-35-color, var(--lime-35));
+        --tc-fg-image: var(--text-lime-35-image, none);
+        --tc-fg-clip: var(--text-lime-35-clip, border-box);
+        --tc-fg-under: var(--text-lime-35-under, transparent);
+    }
+
+    .tc--fg-43, .tc--fg-44, .tc--fg-45, .tc--fg-79, .tc--fg-80, .tc--fg-115 {
+        --tc-fg-color: var(--text-cyan-35-color, var(--cyan-35));
+        --tc-fg-image: var(--text-cyan-35-image, none);
+        --tc-fg-clip: var(--text-cyan-35-clip, border-box);
+        --tc-fg-under: var(--text-cyan-35-under, transparent);
+    }
+
+    .tc--fg-47, .tc--fg-83 {
+        --tc-fg-color: var(--text-green-55-color, var(--green-55));
+        --tc-fg-image: var(--text-green-55-image, none);
+        --tc-fg-clip: var(--text-green-55-clip, border-box);
+        --tc-fg-under: var(--text-green-55-under, transparent);
+    }
+
+    .tc--fg-48, .tc--fg-49, .tc--fg-84, .tc--fg-119, .tc--fg-120 {
+        --tc-fg-color: var(--text-green-60-color, var(--green-60));
+        --tc-fg-image: var(--text-green-60-image, none);
+        --tc-fg-clip: var(--text-green-60-clip, border-box);
+        --tc-fg-under: var(--text-green-60-under, transparent);
+    }
+
+    .tc--fg-52 {
+        --tc-fg-color: var(--text-red-20-color, var(--red-20));
+        --tc-fg-image: var(--text-red-20-image, none);
+        --tc-fg-clip: var(--text-red-20-clip, border-box);
+        --tc-fg-under: var(--text-red-20-under, transparent);
+    }
+
+    .tc--fg-53, .tc--fg-54 {
+        --tc-fg-color: var(--text-purple-20-color, var(--purple-20));
+        --tc-fg-image: var(--text-purple-20-image, none);
+        --tc-fg-clip: var(--text-purple-20-clip, border-box);
+        --tc-fg-under: var(--text-purple-20-under, transparent);
+    }
+
+    .tc--fg-55 {
+        --tc-fg-color: var(--text-violet-30-color, var(--violet-30));
+        --tc-fg-image: var(--text-violet-30-image, none);
+        --tc-fg-clip: var(--text-violet-30-clip, border-box);
+        --tc-fg-under: var(--text-violet-30-under, transparent);
+    }
+
+    .tc--fg-56 {
+        --tc-fg-color: var(--text-violet-35-color, var(--violet-35));
+        --tc-fg-image: var(--text-violet-35-image, none);
+        --tc-fg-clip: var(--text-violet-35-clip, border-box);
+        --tc-fg-under: var(--text-violet-35-under, transparent);
+    }
+
+    .tc--fg-57, .tc--fg-92 {
+        --tc-fg-color: var(--text-violet-40-color, var(--violet-40));
+        --tc-fg-image: var(--text-violet-40-image, none);
+        --tc-fg-clip: var(--text-violet-40-clip, border-box);
+        --tc-fg-under: var(--text-violet-40-under, transparent);
+    }
+
+    .tc--fg-58, .tc--fg-94 {
+        --tc-fg-color: var(--text-yellow-20-color, var(--yellow-20));
+        --tc-fg-image: var(--text-yellow-20-image, none);
+        --tc-fg-clip: var(--text-yellow-20-clip, border-box);
+        --tc-fg-under: var(--text-yellow-20-under, transparent);
+    }
+
+    .tc--fg-59, .tc--fg-60, .tc--fg-61, .tc--fg-95, .tc--fg-241, .tc--fg-242 {
+        --tc-fg-color: var(--text-gray-35-color, var(--gray-35));
+        --tc-fg-image: var(--text-gray-35-image, none);
+        --tc-fg-clip: var(--text-gray-35-clip, border-box);
+        --tc-fg-under: var(--text-gray-35-under, transparent);
+    }
+
+    .tc--fg-64 {
+        --tc-fg-color: var(--text-lime-25-color, var(--lime-25));
+        --tc-fg-image: var(--text-lime-25-image, none);
+        --tc-fg-clip: var(--text-lime-25-clip, border-box);
+        --tc-fg-under: var(--text-lime-25-under, transparent);
+    }
+
+    .tc--fg-65, .tc--fg-66, .tc--fg-96, .tc--fg-97, .tc--fg-132, .tc--fg-243 {
+        --tc-fg-color: var(--text-gray-40-color, var(--gray-40));
+        --tc-fg-image: var(--text-gray-40-image, none);
+        --tc-fg-clip: var(--text-gray-40-clip, border-box);
+        --tc-fg-under: var(--text-gray-40-under, transparent);
+    }
+
+    .tc--fg-81, .tc--fg-116 {
+        --tc-fg-color: var(--text-cyan-40-color, var(--cyan-40));
+        --tc-fg-image: var(--text-cyan-40-image, none);
+        --tc-fg-clip: var(--text-cyan-40-clip, border-box);
+        --tc-fg-under: var(--text-cyan-40-under, transparent);
+    }
+
+    .tc--fg-82 {
+        --tc-fg-color: var(--text-green-50-color, var(--green-50));
+        --tc-fg-image: var(--text-green-50-image, none);
+        --tc-fg-clip: var(--text-green-50-clip, border-box);
+        --tc-fg-under: var(--text-green-50-under, transparent);
+    }
+
+    .tc--fg-85, .tc--fg-121 {
+        --tc-fg-color: var(--text-green-65-color, var(--green-65));
+        --tc-fg-image: var(--text-green-65-image, none);
+        --tc-fg-clip: var(--text-green-65-clip, border-box);
+        --tc-fg-under: var(--text-green-65-under, transparent);
+    }
+
+    .tc--fg-86, .tc--fg-87 {
+        --tc-fg-color: var(--text-cyan-55-color, var(--cyan-55));
+        --tc-fg-image: var(--text-cyan-55-image, none);
+        --tc-fg-clip: var(--text-cyan-55-clip, border-box);
+        --tc-fg-under: var(--text-cyan-55-under, transparent);
+    }
+
+    .tc--fg-89 {
+        --tc-fg-color: var(--text-pink-25-color, var(--pink-25));
+        --tc-fg-image: var(--text-pink-25-image, none);
+        --tc-fg-clip: var(--text-pink-25-clip, border-box);
+        --tc-fg-under: var(--text-pink-25-under, transparent);
+    }
+
+    .tc--fg-93 {
+        --tc-fg-color: var(--text-violet-45-color, var(--violet-45));
+        --tc-fg-image: var(--text-violet-45-image, none);
+        --tc-fg-clip: var(--text-violet-45-clip, border-box);
+        --tc-fg-under: var(--text-violet-45-under, transparent);
+    }
+
+    .tc--fg-106, .tc--fg-107, .tc--fg-142, .tc--fg-143, .tc--fg-178 {
+        --tc-fg-color: var(--text-yellow-30-color, var(--yellow-30));
+        --tc-fg-image: var(--text-yellow-30-image, none);
+        --tc-fg-clip: var(--text-yellow-30-clip, border-box);
+        --tc-fg-under: var(--text-yellow-30-under, transparent);
+    }
+
+    .tc--fg-108, .tc--fg-109, .tc--fg-110, .tc--fg-144, .tc--fg-145, .tc--fg-248, .tc--fg-249 {
+        --tc-fg-color: var(--text-gray-55-color, var(--gray-55));
+        --tc-fg-image: var(--text-gray-55-image, none);
+        --tc-fg-clip: var(--text-gray-55-clip, border-box);
+        --tc-fg-under: var(--text-gray-55-under, transparent);
+    }
+
+    .tc--fg-114, .tc--fg-148, .tc--fg-149, .tc--fg-150, .tc--fg-184, .tc--fg-185 {
+        --tc-fg-color: var(--text-yellow-35-color, var(--yellow-35));
+        --tc-fg-image: var(--text-yellow-35-image, none);
+        --tc-fg-clip: var(--text-yellow-35-clip, border-box);
+        --tc-fg-under: var(--text-yellow-35-under, transparent);
+    }
+
+    .tc--fg-117, .tc--fg-147 {
+        --tc-fg-color: var(--text-blue-70-color, var(--blue-70));
+        --tc-fg-image: var(--text-blue-70-image, none);
+        --tc-fg-clip: var(--text-blue-70-clip, border-box);
+        --tc-fg-under: var(--text-blue-70-under, transparent);
+    }
+
+    .tc--fg-118 {
+        --tc-fg-color: var(--text-lime-45-color, var(--lime-45));
+        --tc-fg-image: var(--text-lime-45-image, none);
+        --tc-fg-clip: var(--text-lime-45-clip, border-box);
+        --tc-fg-under: var(--text-lime-45-under, transparent);
+    }
+
+    .tc--fg-122, .tc--fg-123 {
+        --tc-fg-color: var(--text-cyan-60-color, var(--cyan-60));
+        --tc-fg-image: var(--text-cyan-60-image, none);
+        --tc-fg-clip: var(--text-cyan-60-clip, border-box);
+        --tc-fg-under: var(--text-cyan-60-under, transparent);
+    }
+
+    .tc--fg-124 {
+        --tc-fg-color: var(--text-red-30-color, var(--red-30));
+        --tc-fg-image: var(--text-red-30-image, none);
+        --tc-fg-clip: var(--text-red-30-clip, border-box);
+        --tc-fg-under: var(--text-red-30-under, transparent);
+    }
+
+    .tc--fg-125 {
+        --tc-fg-color: var(--text-pink-30-color, var(--pink-30));
+        --tc-fg-image: var(--text-pink-30-image, none);
+        --tc-fg-clip: var(--text-pink-30-clip, border-box);
+        --tc-fg-under: var(--text-pink-30-under, transparent);
+    }
+
+    .tc--fg-126, .tc--fg-127 {
+        --tc-fg-color: var(--text-purple-30-color, var(--purple-30));
+        --tc-fg-image: var(--text-purple-30-image, none);
+        --tc-fg-clip: var(--text-purple-30-clip, border-box);
+        --tc-fg-under: var(--text-purple-30-under, transparent);
+    }
+
+    .tc--fg-128, .tc--fg-163, .tc--fg-164 {
+        --tc-fg-color: var(--text-purple-35-color, var(--purple-35));
+        --tc-fg-image: var(--text-purple-35-image, none);
+        --tc-fg-clip: var(--text-purple-35-clip, border-box);
+        --tc-fg-under: var(--text-purple-35-under, transparent);
+    }
+
+    .tc--fg-129 {
+        --tc-fg-color: var(--text-violet-50-color, var(--violet-50));
+        --tc-fg-image: var(--text-violet-50-image, none);
+        --tc-fg-clip: var(--text-violet-50-clip, border-box);
+        --tc-fg-under: var(--text-violet-50-under, transparent);
+    }
+
+    .tc--fg-130, .tc--fg-131 {
+        --tc-fg-color: var(--text-orange-30-color, var(--orange-30));
+        --tc-fg-image: var(--text-orange-30-image, none);
+        --tc-fg-clip: var(--text-orange-30-clip, border-box);
+        --tc-fg-under: var(--text-orange-30-under, transparent);
+    }
+
+    .tc--fg-133, .tc--fg-141, .tc--fg-170, .tc--fg-171 {
+        --tc-fg-color: var(--text-violet-60-color, var(--violet-60));
+        --tc-fg-image: var(--text-violet-60-image, none);
+        --tc-fg-clip: var(--text-violet-60-clip, border-box);
+        --tc-fg-under: var(--text-violet-60-under, transparent);
+    }
+
+    .tc--fg-134, .tc--fg-135 {
+        --tc-fg-color: var(--text-violet-55-color, var(--violet-55));
+        --tc-fg-image: var(--text-violet-55-image, none);
+        --tc-fg-clip: var(--text-violet-55-clip, border-box);
+        --tc-fg-under: var(--text-violet-55-under, transparent);
+    }
+
+    .tc--fg-138, .tc--fg-139, .tc--fg-246, .tc--fg-247 {
+        --tc-fg-color: var(--text-gray-50-color, var(--gray-50));
+        --tc-fg-image: var(--text-gray-50-image, none);
+        --tc-fg-clip: var(--text-gray-50-clip, border-box);
+        --tc-fg-under: var(--text-gray-50-under, transparent);
+    }
+
+    .tc--fg-151, .tc--fg-152, .tc--fg-187, .tc--fg-251, .tc--fg-252 {
+        --tc-fg-color: var(--text-gray-65-color, var(--gray-65));
+        --tc-fg-image: var(--text-gray-65-image, none);
+        --tc-fg-clip: var(--text-gray-65-clip, border-box);
+        --tc-fg-under: var(--text-gray-65-under, transparent);
+    }
+
+    .tc--fg-153, .tc--fg-189 {
+        --tc-fg-color: var(--text-blue-75-color, var(--blue-75));
+        --tc-fg-image: var(--text-blue-75-image, none);
+        --tc-fg-clip: var(--text-blue-75-clip, border-box);
+        --tc-fg-under: var(--text-blue-75-under, transparent);
+    }
+
+    .tc--fg-154 {
+        --tc-fg-color: var(--text-lime-50-color, var(--lime-50));
+        --tc-fg-image: var(--text-lime-50-image, none);
+        --tc-fg-clip: var(--text-lime-50-clip, border-box);
+        --tc-fg-under: var(--text-lime-50-under, transparent);
+    }
+
+    .tc--fg-155 {
+        --tc-fg-color: var(--text-lime-55-color, var(--lime-55));
+        --tc-fg-image: var(--text-lime-55-image, none);
+        --tc-fg-clip: var(--text-lime-55-clip, border-box);
+        --tc-fg-under: var(--text-lime-55-under, transparent);
+    }
+
+    .tc--fg-156, .tc--fg-191 {
+        --tc-fg-color: var(--text-lime-60-color, var(--lime-60));
+        --tc-fg-image: var(--text-lime-60-image, none);
+        --tc-fg-clip: var(--text-lime-60-clip, border-box);
+        --tc-fg-under: var(--text-lime-60-under, transparent);
+    }
+
+    .tc--fg-157, .tc--fg-158 {
+        --tc-fg-color: var(--text-green-70-color, var(--green-70));
+        --tc-fg-image: var(--text-green-70-image, none);
+        --tc-fg-clip: var(--text-green-70-clip, border-box);
+        --tc-fg-under: var(--text-green-70-under, transparent);
+    }
+
+    .tc--fg-159 {
+        --tc-fg-color: var(--text-cyan-70-color, var(--cyan-70));
+        --tc-fg-image: var(--text-cyan-70-image, none);
+        --tc-fg-clip: var(--text-cyan-70-clip, border-box);
+        --tc-fg-under: var(--text-cyan-70-under, transparent);
+    }
+
+    .tc--fg-160 {
+        --tc-fg-color: var(--text-red-35-color, var(--red-35));
+        --tc-fg-image: var(--text-red-35-image, none);
+        --tc-fg-clip: var(--text-red-35-clip, border-box);
+        --tc-fg-under: var(--text-red-35-under, transparent);
+    }
+
+    .tc--fg-161, .tc--fg-162 {
+        --tc-fg-color: var(--text-pink-35-color, var(--pink-35));
+        --tc-fg-image: var(--text-pink-35-image, none);
+        --tc-fg-clip: var(--text-pink-35-clip, border-box);
+        --tc-fg-under: var(--text-pink-35-under, transparent);
+    }
+
+    .tc--fg-165, .tc--fg-200 {
+        --tc-fg-color: var(--text-purple-40-color, var(--purple-40));
+        --tc-fg-image: var(--text-purple-40-image, none);
+        --tc-fg-clip: var(--text-purple-40-clip, border-box);
+        --tc-fg-under: var(--text-purple-40-under, transparent);
+    }
+
+    .tc--fg-166 {
+        --tc-fg-color: var(--text-orange-35-color, var(--orange-35));
+        --tc-fg-image: var(--text-orange-35-image, none);
+        --tc-fg-clip: var(--text-orange-35-clip, border-box);
+        --tc-fg-under: var(--text-orange-35-under, transparent);
+    }
+
+    .tc--fg-167, .tc--fg-203 {
+        --tc-fg-color: var(--text-red-55-color, var(--red-55));
+        --tc-fg-image: var(--text-red-55-image, none);
+        --tc-fg-clip: var(--text-red-55-clip, border-box);
+        --tc-fg-under: var(--text-red-55-under, transparent);
+    }
+
+    .tc--fg-168, .tc--fg-169, .tc--fg-205 {
+        --tc-fg-color: var(--text-pink-55-color, var(--pink-55));
+        --tc-fg-image: var(--text-pink-55-image, none);
+        --tc-fg-clip: var(--text-pink-55-clip, border-box);
+        --tc-fg-under: var(--text-pink-55-under, transparent);
+    }
+
+    .tc--fg-172, .tc--fg-173, .tc--fg-202 {
+        --tc-fg-color: var(--text-orange-40-color, var(--orange-40));
+        --tc-fg-image: var(--text-orange-40-image, none);
+        --tc-fg-clip: var(--text-orange-40-clip, border-box);
+        --tc-fg-under: var(--text-orange-40-under, transparent);
+    }
+
+    .tc--fg-174, .tc--fg-204, .tc--fg-209, .tc--fg-210 {
+        --tc-fg-color: var(--text-red-60-color, var(--red-60));
+        --tc-fg-image: var(--text-red-60-image, none);
+        --tc-fg-clip: var(--text-red-60-clip, border-box);
+        --tc-fg-under: var(--text-red-60-under, transparent);
+    }
+
+    .tc--fg-175, .tc--fg-211, .tc--fg-212 {
+        --tc-fg-color: var(--text-pink-60-color, var(--pink-60));
+        --tc-fg-image: var(--text-pink-60-image, none);
+        --tc-fg-clip: var(--text-pink-60-clip, border-box);
+        --tc-fg-under: var(--text-pink-60-under, transparent);
+    }
+
+    .tc--fg-176, .tc--fg-177 {
+        --tc-fg-color: var(--text-violet-65-color, var(--violet-65));
+        --tc-fg-image: var(--text-violet-65-image, none);
+        --tc-fg-clip: var(--text-violet-65-clip, border-box);
+        --tc-fg-under: var(--text-violet-65-under, transparent);
+    }
+
+    .tc--fg-179, .tc--fg-214, .tc--fg-215 {
+        --tc-fg-color: var(--text-orange-55-color, var(--orange-55));
+        --tc-fg-image: var(--text-orange-55-image, none);
+        --tc-fg-clip: var(--text-orange-55-clip, border-box);
+        --tc-fg-under: var(--text-orange-55-under, transparent);
+    }
+
+    .tc--fg-182, .tc--fg-183 {
+        --tc-fg-color: var(--text-violet-70-color, var(--violet-70));
+        --tc-fg-image: var(--text-violet-70-image, none);
+        --tc-fg-clip: var(--text-violet-70-clip, border-box);
+        --tc-fg-under: var(--text-violet-70-under, transparent);
+    }
+
+    .tc--fg-186, .tc--fg-221, .tc--fg-222 {
+        --tc-fg-color: var(--text-orange-65-color, var(--orange-65));
+        --tc-fg-image: var(--text-orange-65-image, none);
+        --tc-fg-clip: var(--text-orange-65-clip, border-box);
+        --tc-fg-under: var(--text-orange-65-under, transparent);
+    }
+
+    .tc--fg-188, .tc--fg-253, .tc--fg-254 {
+        --tc-fg-color: var(--text-gray-70-color, var(--gray-70));
+        --tc-fg-image: var(--text-gray-70-image, none);
+        --tc-fg-clip: var(--text-gray-70-clip, border-box);
+        --tc-fg-under: var(--text-gray-70-under, transparent);
+    }
+
+    .tc--fg-190, .tc--fg-220 {
+        --tc-fg-color: var(--text-yellow-40-color, var(--yellow-40));
+        --tc-fg-image: var(--text-yellow-40-image, none);
+        --tc-fg-clip: var(--text-yellow-40-clip, border-box);
+        --tc-fg-under: var(--text-yellow-40-under, transparent);
+    }
+
+    .tc--fg-192 {
+        --tc-fg-color: var(--text-lime-65-color, var(--lime-65));
+        --tc-fg-image: var(--text-lime-65-image, none);
+        --tc-fg-clip: var(--text-lime-65-clip, border-box);
+        --tc-fg-under: var(--text-lime-65-under, transparent);
+    }
+
+    .tc--fg-193 {
+        --tc-fg-color: var(--text-lime-70-color, var(--lime-70));
+        --tc-fg-image: var(--text-lime-70-image, none);
+        --tc-fg-clip: var(--text-lime-70-clip, border-box);
+        --tc-fg-under: var(--text-lime-70-under, transparent);
+    }
+
+    .tc--fg-194 {
+        --tc-fg-color: var(--text-green-75-color, var(--green-75));
+        --tc-fg-image: var(--text-green-75-image, none);
+        --tc-fg-clip: var(--text-green-75-clip, border-box);
+        --tc-fg-under: var(--text-green-75-under, transparent);
+    }
+
+    .tc--fg-195 {
+        --tc-fg-color: var(--text-cyan-75-color, var(--cyan-75));
+        --tc-fg-image: var(--text-cyan-75-image, none);
+        --tc-fg-clip: var(--text-cyan-75-clip, border-box);
+        --tc-fg-under: var(--text-cyan-75-under, transparent);
+    }
+
+    .tc--fg-197 {
+        --tc-fg-color: var(--text-pink-color, var(--pink));
+        --tc-fg-image: var(--text-pink-image, none);
+        --tc-fg-clip: var(--text-pink-clip, border-box);
+        --tc-fg-under: var(--text-pink-under, transparent);
+    }
+
+    .tc--fg-198 {
+        --tc-fg-color: var(--text-pink-45-color, var(--pink-45));
+        --tc-fg-image: var(--text-pink-45-image, none);
+        --tc-fg-clip: var(--text-pink-45-clip, border-box);
+        --tc-fg-under: var(--text-pink-45-under, transparent);
+    }
+
+    .tc--fg-199 {
+        --tc-fg-color: var(--text-pink-50-color, var(--pink-50));
+        --tc-fg-image: var(--text-pink-50-image, none);
+        --tc-fg-clip: var(--text-pink-50-clip, border-box);
+        --tc-fg-under: var(--text-pink-50-under, transparent);
+    }
+
+    .tc--fg-206, .tc--fg-207 {
+        --tc-fg-color: var(--text-purple-55-color, var(--purple-55));
+        --tc-fg-image: var(--text-purple-55-image, none);
+        --tc-fg-clip: var(--text-purple-55-clip, border-box);
+        --tc-fg-under: var(--text-purple-55-under, transparent);
+    }
+
+    .tc--fg-208 {
+        --tc-fg-color: var(--text-orange-45-color, var(--orange-45));
+        --tc-fg-image: var(--text-orange-45-image, none);
+        --tc-fg-clip: var(--text-orange-45-clip, border-box);
+        --tc-fg-under: var(--text-orange-45-under, transparent);
+    }
+
+    .tc--fg-213 {
+        --tc-fg-color: var(--text-purple-60-color, var(--purple-60));
+        --tc-fg-image: var(--text-purple-60-image, none);
+        --tc-fg-clip: var(--text-purple-60-clip, border-box);
+        --tc-fg-under: var(--text-purple-60-under, transparent);
+    }
+
+    .tc--fg-216 {
+        --tc-fg-color: var(--text-orange-60-color, var(--orange-60));
+        --tc-fg-image: var(--text-orange-60-image, none);
+        --tc-fg-clip: var(--text-orange-60-clip, border-box);
+        --tc-fg-under: var(--text-orange-60-under, transparent);
+    }
+
+    .tc--fg-217 {
+        --tc-fg-color: var(--text-red-70-color, var(--red-70));
+        --tc-fg-image: var(--text-red-70-image, none);
+        --tc-fg-clip: var(--text-red-70-clip, border-box);
+        --tc-fg-under: var(--text-red-70-under, transparent);
+    }
+
+    .tc--fg-218 {
+        --tc-fg-color: var(--text-pink-70-color, var(--pink-70));
+        --tc-fg-image: var(--text-pink-70-image, none);
+        --tc-fg-clip: var(--text-pink-70-clip, border-box);
+        --tc-fg-under: var(--text-pink-70-under, transparent);
+    }
+
+    .tc--fg-219 {
+        --tc-fg-color: var(--text-purple-70-color, var(--purple-70));
+        --tc-fg-image: var(--text-purple-70-image, none);
+        --tc-fg-clip: var(--text-purple-70-clip, border-box);
+        --tc-fg-under: var(--text-purple-70-under, transparent);
+    }
+
+    .tc--fg-223 {
+        --tc-fg-color: var(--text-orange-70-color, var(--orange-70));
+        --tc-fg-image: var(--text-orange-70-image, none);
+        --tc-fg-clip: var(--text-orange-70-clip, border-box);
+        --tc-fg-under: var(--text-orange-70-under, transparent);
+    }
+
+    .tc--fg-224 {
+        --tc-fg-color: var(--text-red-75-color, var(--red-75));
+        --tc-fg-image: var(--text-red-75-image, none);
+        --tc-fg-clip: var(--text-red-75-clip, border-box);
+        --tc-fg-under: var(--text-red-75-under, transparent);
+    }
+
+    .tc--fg-225 {
+        --tc-fg-color: var(--text-purple-75-color, var(--purple-75));
+        --tc-fg-image: var(--text-purple-75-image, none);
+        --tc-fg-clip: var(--text-purple-75-clip, border-box);
+        --tc-fg-under: var(--text-purple-75-under, transparent);
+    }
+
+    .tc--fg-227 {
+        --tc-fg-color: var(--text-yellow-55-color, var(--yellow-55));
+        --tc-fg-image: var(--text-yellow-55-image, none);
+        --tc-fg-clip: var(--text-yellow-55-clip, border-box);
+        --tc-fg-under: var(--text-yellow-55-under, transparent);
+    }
+
+    .tc--fg-228 {
+        --tc-fg-color: var(--text-yellow-60-color, var(--yellow-60));
+        --tc-fg-image: var(--text-yellow-60-image, none);
+        --tc-fg-clip: var(--text-yellow-60-clip, border-box);
+        --tc-fg-under: var(--text-yellow-60-under, transparent);
+    }
+
+    .tc--fg-229 {
+        --tc-fg-color: var(--text-yellow-70-color, var(--yellow-70));
+        --tc-fg-image: var(--text-yellow-70-image, none);
+        --tc-fg-clip: var(--text-yellow-70-clip, border-box);
+        --tc-fg-under: var(--text-yellow-70-under, transparent);
+    }
+
+    .tc--fg-230 {
+        --tc-fg-color: var(--text-yellow-75-color, var(--yellow-75));
+        --tc-fg-image: var(--text-yellow-75-image, none);
+        --tc-fg-clip: var(--text-yellow-75-clip, border-box);
+        --tc-fg-under: var(--text-yellow-75-under, transparent);
+    }
+
+    .tc--fg-232, .tc--fg-233 {
+        --tc-fg-color: var(--text-gray-10-color, var(--gray-10));
+        --tc-fg-image: var(--text-gray-10-image, none);
+        --tc-fg-clip: var(--text-gray-10-clip, border-box);
+        --tc-fg-under: var(--text-gray-10-under, transparent);
+    }
+
+    .tc--fg-234, .tc--fg-235 {
+        --tc-fg-color: var(--text-gray-15-color, var(--gray-15));
+        --tc-fg-image: var(--text-gray-15-image, none);
+        --tc-fg-clip: var(--text-gray-15-clip, border-box);
+        --tc-fg-under: var(--text-gray-15-under, transparent);
+    }
+
+    .tc--fg-236, .tc--fg-237 {
+        --tc-fg-color: var(--text-gray-20-color, var(--gray-20));
+        --tc-fg-image: var(--text-gray-20-image, none);
+        --tc-fg-clip: var(--text-gray-20-clip, border-box);
+        --tc-fg-under: var(--text-gray-20-under, transparent);
+    }
+
+    .tc--fg-238 {
+        --tc-fg-color: var(--text-gray-25-color, var(--gray-25));
+        --tc-fg-image: var(--text-gray-25-image, none);
+        --tc-fg-clip: var(--text-gray-25-clip, border-box);
+        --tc-fg-under: var(--text-gray-25-under, transparent);
+    }
+
+    .tc--fg-239, .tc--fg-240 {
+        --tc-fg-color: var(--text-gray-30-color, var(--gray-30));
+        --tc-fg-image: var(--text-gray-30-image, none);
+        --tc-fg-clip: var(--text-gray-30-clip, border-box);
+        --tc-fg-under: var(--text-gray-30-under, transparent);
+    }
+
+    .tc--fg-255 {
+        --tc-fg-color: var(--text-gray-75-color, var(--gray-75));
+        --tc-fg-image: var(--text-gray-75-image, none);
+        --tc-fg-clip: var(--text-gray-75-clip, border-box);
+        --tc-fg-under: var(--text-gray-75-under, transparent);
+    }
+
+    .tc--bg-0, .tc--bg-16 {
+        --tc-bg-color: var(--bg-black-color, var(--black));
+        --tc-bg-image: var(--bg-black-image, none);
+    }
+
+    .tc--bg-1, .tc--bg-88 {
+        --tc-bg-color: var(--bg-red-25-color, var(--red-25));
+        --tc-bg-image: var(--bg-red-25-image, none);
+    }
+
+    .tc--bg-2, .tc--bg-28 {
+        --tc-bg-color: var(--bg-green-25-color, var(--green-25));
+        --tc-bg-image: var(--bg-green-25-image, none);
+    }
+
+    .tc--bg-3, .tc--bg-100, .tc--bg-136 {
+        --tc-bg-color: var(--bg-yellow-25-color, var(--yellow-25));
+        --tc-bg-image: var(--bg-yellow-25-image, none);
+    }
+
+    .tc--bg-4, .tc--bg-18 {
+        --tc-bg-color: var(--bg-blue-25-color, var(--blue-25));
+        --tc-bg-image: var(--bg-blue-25-image, none);
+    }
+
+    .tc--bg-5, .tc--bg-90, .tc--bg-91 {
+        --tc-bg-color: var(--bg-purple-25-color, var(--purple-25));
+        --tc-bg-image: var(--bg-purple-25-image, none);
+    }
+
+    .tc--bg-6, .tc--bg-29, .tc--bg-30, .tc--bg-31 {
+        --tc-bg-color: var(--bg-cyan-25-color, var(--cyan-25));
+        --tc-bg-image: var(--bg-cyan-25-image, none);
+    }
+
+    .tc--bg-7, .tc--bg-146, .tc--bg-180, .tc--bg-181, .tc--bg-250 {
+        --tc-bg-color: var(--bg-gray-60-color, var(--gray-60));
+        --tc-bg-image: var(--bg-gray-60-image, none);
+    }
+
+    .tc--bg-8, .tc--bg-67, .tc--bg-101, .tc--bg-102, .tc--bg-103, .tc--bg-137, .tc--bg-244, .tc--bg-245 {
+        --tc-bg-color: var(--bg-gray-45-color, var(--gray-45));
+        --tc-bg-image: var(--bg-gray-45-image, none);
+    }
+
+    .tc--bg-9, .tc--bg-196 {
+        --tc-bg-color: var(--bg-red-color, var(--red));
+        --tc-bg-image: var(--bg-red-image, none);
+    }
+
+    .tc--bg-10, .tc--bg-46 {
+        --tc-bg-color: var(--bg-green-color, var(--green));
+        --tc-bg-image: var(--bg-green-image, none);
+    }
+
+    .tc--bg-11, .tc--bg-226 {
+        --tc-bg-color: var(--bg-yellow-color, var(--yellow));
+        --tc-bg-image: var(--bg-yellow-image, none);
+    }
+
+    .tc--bg-12, .tc--bg-21 {
+        --tc-bg-color: var(--bg-blue-color, var(--blue));
+        --tc-bg-image: var(--bg-blue-image, none);
+    }
+
+    .tc--bg-13, .tc--bg-201 {
+        --tc-bg-color: var(--bg-purple-color, var(--purple));
+        --tc-bg-image: var(--bg-purple-image, none);
+    }
+
+    .tc--bg-14, .tc--bg-50, .tc--bg-51 {
+        --tc-bg-color: var(--bg-cyan-color, var(--cyan));
+        --tc-bg-image: var(--bg-cyan-image, none);
+    }
+
+    .tc--bg-15, .tc--bg-231 {
+        --tc-bg-color: var(--bg-white-color, var(--white));
+        --tc-bg-image: var(--bg-white-image, none);
+    }
+
+    .tc--bg-17 {
+        --tc-bg-color: var(--bg-blue-20-color, var(--blue-20));
+        --tc-bg-image: var(--bg-blue-20-image, none);
+    }
+
+    .tc--bg-19 {
+        --tc-bg-color: var(--bg-blue-30-color, var(--blue-30));
+        --tc-bg-image: var(--bg-blue-30-image, none);
+    }
+
+    .tc--bg-20 {
+        --tc-bg-color: var(--bg-blue-35-color, var(--blue-35));
+        --tc-bg-image: var(--bg-blue-35-image, none);
+    }
+
+    .tc--bg-22 {
+        --tc-bg-color: var(--bg-green-20-color, var(--green-20));
+        --tc-bg-image: var(--bg-green-20-image, none);
+    }
+
+    .tc--bg-23, .tc--bg-24, .tc--bg-25 {
+        --tc-bg-color: var(--bg-cyan-20-color, var(--cyan-20));
+        --tc-bg-image: var(--bg-cyan-20-image, none);
+    }
+
+    .tc--bg-26, .tc--bg-27, .tc--bg-62, .tc--bg-63 {
+        --tc-bg-color: var(--bg-blue-55-color, var(--blue-55));
+        --tc-bg-image: var(--bg-blue-55-image, none);
+    }
+
+    .tc--bg-32, .tc--bg-33, .tc--bg-68, .tc--bg-69, .tc--bg-98, .tc--bg-99, .tc--bg-105 {
+        --tc-bg-color: var(--bg-blue-60-color, var(--blue-60));
+        --tc-bg-image: var(--bg-blue-60-image, none);
+    }
+
+    .tc--bg-34 {
+        --tc-bg-color: var(--bg-green-30-color, var(--green-30));
+        --tc-bg-image: var(--bg-green-30-image, none);
+    }
+
+    .tc--bg-35, .tc--bg-70, .tc--bg-71 {
+        --tc-bg-color: var(--bg-lime-30-color, var(--lime-30));
+        --tc-bg-image: var(--bg-lime-30-image, none);
+    }
+
+    .tc--bg-36, .tc--bg-37, .tc--bg-38, .tc--bg-72, .tc--bg-73, .tc--bg-74 {
+        --tc-bg-color: var(--bg-cyan-30-color, var(--cyan-30));
+        --tc-bg-image: var(--bg-cyan-30-image, none);
+    }
+
+    .tc--bg-39, .tc--bg-75, .tc--bg-104, .tc--bg-111, .tc--bg-140 {
+        --tc-bg-color: var(--bg-blue-65-color, var(--blue-65));
+        --tc-bg-image: var(--bg-blue-65-image, none);
+    }
+
+    .tc--bg-40 {
+        --tc-bg-color: var(--bg-green-35-color, var(--green-35));
+        --tc-bg-image: var(--bg-green-35-image, none);
+    }
+
+    .tc--bg-41, .tc--bg-42, .tc--bg-76, .tc--bg-77, .tc--bg-78, .tc--bg-112, .tc--bg-113 {
+        --tc-bg-color: var(--bg-lime-35-color, var(--lime-35));
+        --tc-bg-image: var(--bg-lime-35-image, none);
+    }
+
+    .tc--bg-43, .tc--bg-44, .tc--bg-45, .tc--bg-79, .tc--bg-80, .tc--bg-115 {
+        --tc-bg-color: var(--bg-cyan-35-color, var(--cyan-35));
+        --tc-bg-image: var(--bg-cyan-35-image, none);
+    }
+
+    .tc--bg-47, .tc--bg-83 {
+        --tc-bg-color: var(--bg-green-55-color, var(--green-55));
+        --tc-bg-image: var(--bg-green-55-image, none);
+    }
+
+    .tc--bg-48, .tc--bg-49, .tc--bg-84, .tc--bg-119, .tc--bg-120 {
+        --tc-bg-color: var(--bg-green-60-color, var(--green-60));
+        --tc-bg-image: var(--bg-green-60-image, none);
+    }
+
+    .tc--bg-52 {
+        --tc-bg-color: var(--bg-red-20-color, var(--red-20));
+        --tc-bg-image: var(--bg-red-20-image, none);
+    }
+
+    .tc--bg-53, .tc--bg-54 {
+        --tc-bg-color: var(--bg-purple-20-color, var(--purple-20));
+        --tc-bg-image: var(--bg-purple-20-image, none);
+    }
+
+    .tc--bg-55 {
+        --tc-bg-color: var(--bg-violet-30-color, var(--violet-30));
+        --tc-bg-image: var(--bg-violet-30-image, none);
+    }
+
+    .tc--bg-56 {
+        --tc-bg-color: var(--bg-violet-35-color, var(--violet-35));
+        --tc-bg-image: var(--bg-violet-35-image, none);
+    }
+
+    .tc--bg-57, .tc--bg-92 {
+        --tc-bg-color: var(--bg-violet-40-color, var(--violet-40));
+        --tc-bg-image: var(--bg-violet-40-image, none);
+    }
+
+    .tc--bg-58, .tc--bg-94 {
+        --tc-bg-color: var(--bg-yellow-20-color, var(--yellow-20));
+        --tc-bg-image: var(--bg-yellow-20-image, none);
+    }
+
+    .tc--bg-59, .tc--bg-60, .tc--bg-61, .tc--bg-95, .tc--bg-241, .tc--bg-242 {
+        --tc-bg-color: var(--bg-gray-35-color, var(--gray-35));
+        --tc-bg-image: var(--bg-gray-35-image, none);
+    }
+
+    .tc--bg-64 {
+        --tc-bg-color: var(--bg-lime-25-color, var(--lime-25));
+        --tc-bg-image: var(--bg-lime-25-image, none);
+    }
+
+    .tc--bg-65, .tc--bg-66, .tc--bg-96, .tc--bg-97, .tc--bg-132, .tc--bg-243 {
+        --tc-bg-color: var(--bg-gray-40-color, var(--gray-40));
+        --tc-bg-image: var(--bg-gray-40-image, none);
+    }
+
+    .tc--bg-81, .tc--bg-116 {
+        --tc-bg-color: var(--bg-cyan-40-color, var(--cyan-40));
+        --tc-bg-image: var(--bg-cyan-40-image, none);
+    }
+
+    .tc--bg-82 {
+        --tc-bg-color: var(--bg-green-50-color, var(--green-50));
+        --tc-bg-image: var(--bg-green-50-image, none);
+    }
+
+    .tc--bg-85, .tc--bg-121 {
+        --tc-bg-color: var(--bg-green-65-color, var(--green-65));
+        --tc-bg-image: var(--bg-green-65-image, none);
+    }
+
+    .tc--bg-86, .tc--bg-87 {
+        --tc-bg-color: var(--bg-cyan-55-color, var(--cyan-55));
+        --tc-bg-image: var(--bg-cyan-55-image, none);
+    }
+
+    .tc--bg-89 {
+        --tc-bg-color: var(--bg-pink-25-color, var(--pink-25));
+        --tc-bg-image: var(--bg-pink-25-image, none);
+    }
+
+    .tc--bg-93 {
+        --tc-bg-color: var(--bg-violet-45-color, var(--violet-45));
+        --tc-bg-image: var(--bg-violet-45-image, none);
+    }
+
+    .tc--bg-106, .tc--bg-107, .tc--bg-142, .tc--bg-143, .tc--bg-178 {
+        --tc-bg-color: var(--bg-yellow-30-color, var(--yellow-30));
+        --tc-bg-image: var(--bg-yellow-30-image, none);
+    }
+
+    .tc--bg-108, .tc--bg-109, .tc--bg-110, .tc--bg-144, .tc--bg-145, .tc--bg-248, .tc--bg-249 {
+        --tc-bg-color: var(--bg-gray-55-color, var(--gray-55));
+        --tc-bg-image: var(--bg-gray-55-image, none);
+    }
+
+    .tc--bg-114, .tc--bg-148, .tc--bg-149, .tc--bg-150, .tc--bg-184, .tc--bg-185 {
+        --tc-bg-color: var(--bg-yellow-35-color, var(--yellow-35));
+        --tc-bg-image: var(--bg-yellow-35-image, none);
+    }
+
+    .tc--bg-117, .tc--bg-147 {
+        --tc-bg-color: var(--bg-blue-70-color, var(--blue-70));
+        --tc-bg-image: var(--bg-blue-70-image, none);
+    }
+
+    .tc--bg-118 {
+        --tc-bg-color: var(--bg-lime-45-color, var(--lime-45));
+        --tc-bg-image: var(--bg-lime-45-image, none);
+    }
+
+    .tc--bg-122, .tc--bg-123 {
+        --tc-bg-color: var(--bg-cyan-60-color, var(--cyan-60));
+        --tc-bg-image: var(--bg-cyan-60-image, none);
+    }
+
+    .tc--bg-124 {
+        --tc-bg-color: var(--bg-red-30-color, var(--red-30));
+        --tc-bg-image: var(--bg-red-30-image, none);
+    }
+
+    .tc--bg-125 {
+        --tc-bg-color: var(--bg-pink-30-color, var(--pink-30));
+        --tc-bg-image: var(--bg-pink-30-image, none);
+    }
+
+    .tc--bg-126, .tc--bg-127 {
+        --tc-bg-color: var(--bg-purple-30-color, var(--purple-30));
+        --tc-bg-image: var(--bg-purple-30-image, none);
+    }
+
+    .tc--bg-128, .tc--bg-163, .tc--bg-164 {
+        --tc-bg-color: var(--bg-purple-35-color, var(--purple-35));
+        --tc-bg-image: var(--bg-purple-35-image, none);
+    }
+
+    .tc--bg-129 {
+        --tc-bg-color: var(--bg-violet-50-color, var(--violet-50));
+        --tc-bg-image: var(--bg-violet-50-image, none);
+    }
+
+    .tc--bg-130, .tc--bg-131 {
+        --tc-bg-color: var(--bg-orange-30-color, var(--orange-30));
+        --tc-bg-image: var(--bg-orange-30-image, none);
+    }
+
+    .tc--bg-133, .tc--bg-141, .tc--bg-170, .tc--bg-171 {
+        --tc-bg-color: var(--bg-violet-60-color, var(--violet-60));
+        --tc-bg-image: var(--bg-violet-60-image, none);
+    }
+
+    .tc--bg-134, .tc--bg-135 {
+        --tc-bg-color: var(--bg-violet-55-color, var(--violet-55));
+        --tc-bg-image: var(--bg-violet-55-image, none);
+    }
+
+    .tc--bg-138, .tc--bg-139, .tc--bg-246, .tc--bg-247 {
+        --tc-bg-color: var(--bg-gray-50-color, var(--gray-50));
+        --tc-bg-image: var(--bg-gray-50-image, none);
+    }
+
+    .tc--bg-151, .tc--bg-152, .tc--bg-187, .tc--bg-251, .tc--bg-252 {
+        --tc-bg-color: var(--bg-gray-65-color, var(--gray-65));
+        --tc-bg-image: var(--bg-gray-65-image, none);
+    }
+
+    .tc--bg-153, .tc--bg-189 {
+        --tc-bg-color: var(--bg-blue-75-color, var(--blue-75));
+        --tc-bg-image: var(--bg-blue-75-image, none);
+    }
+
+    .tc--bg-154 {
+        --tc-bg-color: var(--bg-lime-50-color, var(--lime-50));
+        --tc-bg-image: var(--bg-lime-50-image, none);
+    }
+
+    .tc--bg-155 {
+        --tc-bg-color: var(--bg-lime-55-color, var(--lime-55));
+        --tc-bg-image: var(--bg-lime-55-image, none);
+    }
+
+    .tc--bg-156, .tc--bg-191 {
+        --tc-bg-color: var(--bg-lime-60-color, var(--lime-60));
+        --tc-bg-image: var(--bg-lime-60-image, none);
+    }
+
+    .tc--bg-157, .tc--bg-158 {
+        --tc-bg-color: var(--bg-green-70-color, var(--green-70));
+        --tc-bg-image: var(--bg-green-70-image, none);
+    }
+
+    .tc--bg-159 {
+        --tc-bg-color: var(--bg-cyan-70-color, var(--cyan-70));
+        --tc-bg-image: var(--bg-cyan-70-image, none);
+    }
+
+    .tc--bg-160 {
+        --tc-bg-color: var(--bg-red-35-color, var(--red-35));
+        --tc-bg-image: var(--bg-red-35-image, none);
+    }
+
+    .tc--bg-161, .tc--bg-162 {
+        --tc-bg-color: var(--bg-pink-35-color, var(--pink-35));
+        --tc-bg-image: var(--bg-pink-35-image, none);
+    }
+
+    .tc--bg-165, .tc--bg-200 {
+        --tc-bg-color: var(--bg-purple-40-color, var(--purple-40));
+        --tc-bg-image: var(--bg-purple-40-image, none);
+    }
+
+    .tc--bg-166 {
+        --tc-bg-color: var(--bg-orange-35-color, var(--orange-35));
+        --tc-bg-image: var(--bg-orange-35-image, none);
+    }
+
+    .tc--bg-167, .tc--bg-203 {
+        --tc-bg-color: var(--bg-red-55-color, var(--red-55));
+        --tc-bg-image: var(--bg-red-55-image, none);
+    }
+
+    .tc--bg-168, .tc--bg-169, .tc--bg-205 {
+        --tc-bg-color: var(--bg-pink-55-color, var(--pink-55));
+        --tc-bg-image: var(--bg-pink-55-image, none);
+    }
+
+    .tc--bg-172, .tc--bg-173, .tc--bg-202 {
+        --tc-bg-color: var(--bg-orange-40-color, var(--orange-40));
+        --tc-bg-image: var(--bg-orange-40-image, none);
+    }
+
+    .tc--bg-174, .tc--bg-204, .tc--bg-209, .tc--bg-210 {
+        --tc-bg-color: var(--bg-red-60-color, var(--red-60));
+        --tc-bg-image: var(--bg-red-60-image, none);
+    }
+
+    .tc--bg-175, .tc--bg-211, .tc--bg-212 {
+        --tc-bg-color: var(--bg-pink-60-color, var(--pink-60));
+        --tc-bg-image: var(--bg-pink-60-image, none);
+    }
+
+    .tc--bg-176, .tc--bg-177 {
+        --tc-bg-color: var(--bg-violet-65-color, var(--violet-65));
+        --tc-bg-image: var(--bg-violet-65-image, none);
+    }
+
+    .tc--bg-179, .tc--bg-214, .tc--bg-215 {
+        --tc-bg-color: var(--bg-orange-55-color, var(--orange-55));
+        --tc-bg-image: var(--bg-orange-55-image, none);
+    }
+
+    .tc--bg-182, .tc--bg-183 {
+        --tc-bg-color: var(--bg-violet-70-color, var(--violet-70));
+        --tc-bg-image: var(--bg-violet-70-image, none);
+    }
+
+    .tc--bg-186, .tc--bg-221, .tc--bg-222 {
+        --tc-bg-color: var(--bg-orange-65-color, var(--orange-65));
+        --tc-bg-image: var(--bg-orange-65-image, none);
+    }
+
+    .tc--bg-188, .tc--bg-253, .tc--bg-254 {
+        --tc-bg-color: var(--bg-gray-70-color, var(--gray-70));
+        --tc-bg-image: var(--bg-gray-70-image, none);
+    }
+
+    .tc--bg-190, .tc--bg-220 {
+        --tc-bg-color: var(--bg-yellow-40-color, var(--yellow-40));
+        --tc-bg-image: var(--bg-yellow-40-image, none);
+    }
+
+    .tc--bg-192 {
+        --tc-bg-color: var(--bg-lime-65-color, var(--lime-65));
+        --tc-bg-image: var(--bg-lime-65-image, none);
+    }
+
+    .tc--bg-193 {
+        --tc-bg-color: var(--bg-lime-70-color, var(--lime-70));
+        --tc-bg-image: var(--bg-lime-70-image, none);
+    }
+
+    .tc--bg-194 {
+        --tc-bg-color: var(--bg-green-75-color, var(--green-75));
+        --tc-bg-image: var(--bg-green-75-image, none);
+    }
+
+    .tc--bg-195 {
+        --tc-bg-color: var(--bg-cyan-75-color, var(--cyan-75));
+        --tc-bg-image: var(--bg-cyan-75-image, none);
+    }
+
+    .tc--bg-197 {
+        --tc-bg-color: var(--bg-pink-color, var(--pink));
+        --tc-bg-image: var(--bg-pink-image, none);
+    }
+
+    .tc--bg-198 {
+        --tc-bg-color: var(--bg-pink-45-color, var(--pink-45));
+        --tc-bg-image: var(--bg-pink-45-image, none);
+    }
+
+    .tc--bg-199 {
+        --tc-bg-color: var(--bg-pink-50-color, var(--pink-50));
+        --tc-bg-image: var(--bg-pink-50-image, none);
+    }
+
+    .tc--bg-206, .tc--bg-207 {
+        --tc-bg-color: var(--bg-purple-55-color, var(--purple-55));
+        --tc-bg-image: var(--bg-purple-55-image, none);
+    }
+
+    .tc--bg-208 {
+        --tc-bg-color: var(--bg-orange-45-color, var(--orange-45));
+        --tc-bg-image: var(--bg-orange-45-image, none);
+    }
+
+    .tc--bg-213 {
+        --tc-bg-color: var(--bg-purple-60-color, var(--purple-60));
+        --tc-bg-image: var(--bg-purple-60-image, none);
+    }
+
+    .tc--bg-216 {
+        --tc-bg-color: var(--bg-orange-60-color, var(--orange-60));
+        --tc-bg-image: var(--bg-orange-60-image, none);
+    }
+
+    .tc--bg-217 {
+        --tc-bg-color: var(--bg-red-70-color, var(--red-70));
+        --tc-bg-image: var(--bg-red-70-image, none);
+    }
+
+    .tc--bg-218 {
+        --tc-bg-color: var(--bg-pink-70-color, var(--pink-70));
+        --tc-bg-image: var(--bg-pink-70-image, none);
+    }
+
+    .tc--bg-219 {
+        --tc-bg-color: var(--bg-purple-70-color, var(--purple-70));
+        --tc-bg-image: var(--bg-purple-70-image, none);
+    }
+
+    .tc--bg-223 {
+        --tc-bg-color: var(--bg-orange-70-color, var(--orange-70));
+        --tc-bg-image: var(--bg-orange-70-image, none);
+    }
+
+    .tc--bg-224 {
+        --tc-bg-color: var(--bg-red-75-color, var(--red-75));
+        --tc-bg-image: var(--bg-red-75-image, none);
+    }
+
+    .tc--bg-225 {
+        --tc-bg-color: var(--bg-purple-75-color, var(--purple-75));
+        --tc-bg-image: var(--bg-purple-75-image, none);
+    }
+
+    .tc--bg-227 {
+        --tc-bg-color: var(--bg-yellow-55-color, var(--yellow-55));
+        --tc-bg-image: var(--bg-yellow-55-image, none);
+    }
+
+    .tc--bg-228 {
+        --tc-bg-color: var(--bg-yellow-60-color, var(--yellow-60));
+        --tc-bg-image: var(--bg-yellow-60-image, none);
+    }
+
+    .tc--bg-229 {
+        --tc-bg-color: var(--bg-yellow-70-color, var(--yellow-70));
+        --tc-bg-image: var(--bg-yellow-70-image, none);
+    }
+
+    .tc--bg-230 {
+        --tc-bg-color: var(--bg-yellow-75-color, var(--yellow-75));
+        --tc-bg-image: var(--bg-yellow-75-image, none);
+    }
+
+    .tc--bg-232, .tc--bg-233 {
+        --tc-bg-color: var(--bg-gray-10-color, var(--gray-10));
+        --tc-bg-image: var(--bg-gray-10-image, none);
+    }
+
+    .tc--bg-234, .tc--bg-235 {
+        --tc-bg-color: var(--bg-gray-15-color, var(--gray-15));
+        --tc-bg-image: var(--bg-gray-15-image, none);
+    }
+
+    .tc--bg-236, .tc--bg-237 {
+        --tc-bg-color: var(--bg-gray-20-color, var(--gray-20));
+        --tc-bg-image: var(--bg-gray-20-image, none);
+    }
+
+    .tc--bg-238 {
+        --tc-bg-color: var(--bg-gray-25-color, var(--gray-25));
+        --tc-bg-image: var(--bg-gray-25-image, none);
+    }
+
+    .tc--bg-239, .tc--bg-240 {
+        --tc-bg-color: var(--bg-gray-30-color, var(--gray-30));
+        --tc-bg-image: var(--bg-gray-30-image, none);
+    }
+
+    .tc--bg-255 {
+        --tc-bg-color: var(--bg-gray-75-color, var(--gray-75));
+        --tc-bg-image: var(--bg-gray-75-image, none);
+    }
+
+    .tc--bold {
+        text-shadow: -.05px 0, 0 .05px, .05px 0, 0 -.05px;
+    }
+
+    .tc--dim {
+        opacity: 0.75;
+    }
+
+    .tc--ital {
+        font-style: italic;
+    }
+
+    .tc--undl {
+        text-decoration: underline;
+    }
+</style>
+{% assign gridId = "grid-" | append_random %}
+<div class="layout layout--left layout--top">
+    <!--
+        on 1x: 111 x 29 ( x ?? w/o bar )
+        on 2x: ?? x ?? ( x ?? w/o bar )
+    -->
+    <pre class="trmnl-console {{ data.scale }}">{{ data.content | raw }}</pre>
+</div>
+{% if data.bar %}
+    <div class="title_bar">
+        {% if data.bar.icon %}
+            <img class="image image-dither" src="{{ data.bar.icon }}">
+        {% endif %}
+        <span class="title">
+            {% if data.bar.left %}
+                {{ data.bar.left }}
+            {% endif %}
+        </span>
+        {% if data.bar.right %}
+            <span class="instance">{{ data.bar.right }}</span>
+        {% endif %}
+    </div>
+{% endif %}
+{% endtemplate %}
+
+{% template error_info %}
+{% # TODO !!!                 %}
+<div class="layout w--full h--full">
+    <div class="flex flex--row gap--xlarge">
+        <div><img src="https://capypara.de/caution.svg" class="w--36" class="image image-dither"></div>
+        <div class="stretch-x">
+            <p><span class="title">Failed loading Last.fm Albums</span></p>
+            </p>
+            <span class="description description--large">
+                    <ul>
+                        {% for error in errors %}
+                            <li>{{ error }}</li>
+                        {% endfor %}
+                    </ul>
+                    <br>
+                </span>
+            </p>
+        </div>
+    </div>
+</div>
+{% endtemplate %}

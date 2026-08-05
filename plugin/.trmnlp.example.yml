@@ -1,0 +1,18 @@
+watch:
+  - .trmnlp.yml
+  - src
+
+custom_fields: { }
+
+variables:
+  trmnl:
+    is_trmnlp: true
+  # add webhook content to simulate in your own .trmnlp.yml here:
+  data:
+    width: 111
+    scale: 1
+    bar: # set to null to disable bar
+      left: left
+      right: right
+      icon: ...
+    content: ""  # add the output of trmnl-console --sbuffer-json here.
