@@ -1,3 +1,4 @@
+mod demo;
 mod payload;
 mod sbuffer;
 mod terminal_subprocess;
@@ -219,13 +220,15 @@ pub async fn main() -> ExitCode {
             VirtualTerminal::run_with_async_reader(args.width, args.height, Box::pin(stdin)).await
         }
         InputMode::Demo => {
-            todo!("implement demo mode");
-            /*VirtualTerminal::run_with_async_reader(
+            VirtualTerminal::run_with_async_reader(
                 args.width,
                 args.height,
-                Box::pin(std::io::Cursor::new(demo)),
+                Box::pin(std::io::Cursor::new(demo::render_terminal_output(
+                    args.width as _,
+                    args.height as _,
+                ))),
             )
-            .await*/
+            .await
         }
     }
     .expect("failed to init terminal");
