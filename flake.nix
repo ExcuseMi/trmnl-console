@@ -10,13 +10,34 @@
       self,
       nixpkgs,
     }:
+    let
+      eachSystem = nixpkgs.lib.genAttrs [
+        "aarch64-linux"
+        "x86_64-linux"
+        "aarch64-darwin"
+      ];
+      eachSystemPkgs =
+        fn:
+        builtins.mapAttrs fn (
+          eachSystem (
+            system:
+            nixpkgs.legacyPackages.${system} or (import nixpkgs {
+              inherit system;
+            })
+          )
+        );
+      eachPkgs = fn: eachSystemPkgs (_: fn);
+    in
     {
-      devShells.x86_64-linux =
-        let
-          pkgs = import nixpkgs { system = "x86_64-linux"; };
-        in
-        {
-          default = pkgs.callPackage ./devshell.nix { };
-        };
+      packages = eachPkgs (pkgs: rec {
+        trmnl-console = pkgs.callPackage ./cli-client/pkg.nix { };
+        default = trmnl-console;
+      });
+
+      formatter = eachPkgs (pkgs: pkgs.nixfmt-tree);
+
+      devShells = eachPkgs (pkgs: {
+        default = pkgs.callPackage ./devshell.nix { };
+      });
     };
 }
