@@ -174,9 +174,9 @@ pub const TWO_ROWS: Fixture = Fixture {
 /// HTML_TRAILING_NEWLINE contract constant.
 pub fn expected_stdout(html: &str) -> String {
     if HTML_TRAILING_NEWLINE {
-        format!("{html}\n")
+        format!("<pre>{html}</pre>\n")
     } else {
-        html.to_string()
+        format!("<pre>{html}</pre>")
     }
 }
 
@@ -198,11 +198,7 @@ pub fn extract_preview_url(line: &str) -> String {
     let start = line
         .find("http://127.0.0.1:")
         .unwrap_or_else(|| panic!("no preview URL found in stdout line: {line:?}"));
-    line[start..]
-        .split_whitespace()
-        .next()
-        .unwrap()
-        .to_string()
+    line[start..].split_whitespace().next().unwrap().to_string()
 }
 
 // =====================================================================
@@ -465,8 +461,8 @@ fn spawn_stdout_reader(
                 Ok(n) => {
                     all.extend_from_slice(&buf[..n]);
                     while let Some(pos) = all[line_start..].iter().position(|&b| b == b'\n') {
-                        let line =
-                            String::from_utf8_lossy(&all[line_start..line_start + pos]).into_owned();
+                        let line = String::from_utf8_lossy(&all[line_start..line_start + pos])
+                            .into_owned();
                         let _ = tx.send(line);
                         line_start += pos + 1;
                     }
