@@ -5,7 +5,7 @@ dark_mode: 'no'
 static_data: ''
 polling_verb: get
 framework_version: 3.2.0
-serverless_language: ''
+serverless_language: python
 polling_url: ''
 polling_headers: ''
 polling_body: ''
@@ -31,12 +31,12 @@ oauth_expiry_field_name: ''
 oauth_expiry_strategy: ''
 oauth_fixed_expiry_ms: ''
 custom_fields:
-  - keyname: info
-    field_type: author_bio
-    name: About This Plugin
-    description: TODO Description
-    category: custom,productivity
-    github_url: https://github.com/theCapypara/trmnl-console
+- keyname: info
+  field_type: author_bio
+  name: About This Plugin
+  description: TODO Description
+  category: custom,productivity
+  github_url: https://github.com/theCapypara/trmnl-console
 name: Console
 description: TODO Description
 refresh_interval:

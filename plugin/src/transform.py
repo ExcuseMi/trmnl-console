@@ -221,14 +221,17 @@ def run(input):
         # decode sbuffer to HTML
         if "content" in input["data"] and "width" in input["data"]:
             try:
-                input["data"]["content"] = sbuffer_to_html(
+                input["data"]["content_transformed"] = sbuffer_to_html(
                     input["data"]["content"], input["data"]["width"]
                 )
-            except Exception:
-                pass  # todo
+                del input["data"]["content"]
+            except Exception as e:
+                return {"error": f"failed to decode console output: {e.__class__.__name__}: {e}"}
         else:
-            pass  # todo
+            return {"error": "plugin did not receive console input and width."}
         # preformat scale class
         if "scale" in input["data"]:
             input["data"]["scale"] = f"tc--x{input["data"]["scale"]}"
+    else:
+        return {"error": "plugin did not receive any data yet."}
     return input

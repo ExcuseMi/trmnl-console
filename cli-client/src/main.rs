@@ -2,6 +2,7 @@ mod payload;
 mod sbuffer;
 mod terminal_subprocess;
 mod virtual_terminal;
+mod webhook;
 
 use crate::virtual_terminal::VirtualTerminal;
 use clap::Parser;
@@ -218,13 +219,13 @@ pub async fn main() -> ExitCode {
             VirtualTerminal::run_with_async_reader(args.width, args.height, Box::pin(stdin)).await
         }
         InputMode::Demo => {
-            let demo = "this is a demo test";
-            VirtualTerminal::run_with_async_reader(
+            todo!("implement demo mode");
+            /*VirtualTerminal::run_with_async_reader(
                 args.width,
                 args.height,
                 Box::pin(std::io::Cursor::new(demo)),
             )
-            .await
+            .await*/
         }
     }
     .expect("failed to init terminal");
@@ -246,22 +247,23 @@ pub async fn main() -> ExitCode {
 
     // we exit explicitly since the tokio Runtime may still be dealing with the stdin task.
     std::process::exit(match snapshot {
-        Ok(snapshot) => {
-            match output_mode {
-                OutputMode::HtmlToStdout => {
-                    println!("<pre>{}</pre>", snapshot.to_html());
-                }
-                OutputMode::JsonToStdout => {
-                    serde_json::to_writer_pretty(std::io::stdout(), &payload::make(args, snapshot))
-                        .unwrap();
-                    println!();
-                }
-                OutputMode::SendToWebhook => {}
-                OutputMode::PreviewServer => {}
+        Ok(snapshot) => match output_mode {
+            OutputMode::HtmlToStdout => {
+                println!("<pre>{}</pre>", snapshot.to_html());
+                0
             }
-
-            0
-        }
+            OutputMode::JsonToStdout => {
+                serde_json::to_writer_pretty(std::io::stdout(), &payload::make(&args, snapshot))
+                    .unwrap();
+                println!();
+                0
+            }
+            OutputMode::SendToWebhook => {
+                let payload = payload::make(&args, snapshot);
+                webhook::send_cli(args.url.unwrap(), payload).await as _
+            }
+            OutputMode::PreviewServer => todo!("implement preview server"),
+        },
         Err(exit_code) => {
             eprintln!("trmnl-console: child command failed.");
             exit_code as _

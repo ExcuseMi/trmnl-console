@@ -1426,7 +1426,7 @@
         on 1x: 111 x 29 ( x ?? w/o bar )
         on 2x: ?? x ?? ( x ?? w/o bar )
     -->
-    <pre class="trmnl-console {{ data.scale }}">{{ data.content | raw }}</pre>
+    <pre class="trmnl-console {{ data.scale }}">{{ data.content_transformed | raw }}</pre>
 </div>
 {% if data.bar %}
     <div class="title_bar">
@@ -1446,22 +1446,23 @@
 {% endtemplate %}
 
 {% template error_info %}
-{% # TODO !!!                   %}
 <div class="layout w--full h--full">
     <div class="flex flex--row gap--xlarge">
         <div><img src="https://capypara.de/caution.svg" class="w--36 image image-dither"></div>
         <div class="stretch-x">
-            <p><span class="title">TODO FAILURE</span></p>
-            <span class="description description--large">
-                    <ul>
-                        {% for error in errors %}
-                            <li>{{ error }}</li>
-                        {% endfor %}
-                    </ul>
-                    <br>
+            <p>
+                <span class="title">Failed to display console output</span>
+            </p>
+            <p>
+                <span class="description description--large">
+                    {{ error }}
                 </span>
             </p>
         </div>
     </div>
+</div>
+<div class="title_bar">
+    <span class="title">Console</span>
+    <span class="instance">{{ trmnl.plugin_settings.instance_name }}</span>
 </div>
 {% endtemplate %}

@@ -41,7 +41,7 @@ pub const HTML_TRAILING_NEWLINE: bool = true;
 /// request 1 (metadata). `None` = field omitted entirely; TRMNL's default
 /// strategy is "replace", which wipes stale variables — plausibly what the
 /// metadata request wants.
-pub const WEBHOOK_REQ1_MERGE_STRATEGY: Option<&str> = None;
+pub const WEBHOOK_REQ1_MERGE_STRATEGY: Option<&str> = Some("deep_merge");
 
 /// TWEAKABLE: "merge_strategy" on webhook request 2 (content). "deep_merge"
 /// so the content merges into the data object set by request 1.
