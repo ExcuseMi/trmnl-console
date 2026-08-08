@@ -1421,7 +1421,6 @@
         text-decoration: underline;
     }
 </style>
-{% assign gridId = "grid-" | append_random %}
 <div class="layout layout--left layout--top">
     <!--
         on 1x: 111 x 29 ( x ?? w/o bar )
@@ -1447,13 +1446,12 @@
 {% endtemplate %}
 
 {% template error_info %}
-{% # TODO !!!                 %}
+{% # TODO !!!                   %}
 <div class="layout w--full h--full">
     <div class="flex flex--row gap--xlarge">
-        <div><img src="https://capypara.de/caution.svg" class="w--36" class="image image-dither"></div>
+        <div><img src="https://capypara.de/caution.svg" class="w--36 image image-dither"></div>
         <div class="stretch-x">
-            <p><span class="title">Failed loading Last.fm Albums</span></p>
-            </p>
+            <p><span class="title">TODO FAILURE</span></p>
             <span class="description description--large">
                     <ul>
                         {% for error in errors %}
