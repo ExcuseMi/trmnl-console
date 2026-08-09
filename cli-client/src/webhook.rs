@@ -81,17 +81,15 @@ fn format_err_details(err: String) -> String {
     if err.is_empty() {
         return "not available".to_string();
     }
-    if let Ok(json) = serde_json::from_str::<Value>(&err) {
-        if let Value::Object(obj) = json {
-            if let Some(message) = obj.get("message") {
+    if let Ok(json) = serde_json::from_str::<Value>(&err)
+        && let Value::Object(obj) = json
+            && let Some(message) = obj.get("message") {
                 if let Value::String(message) = message {
                     return message.clone();
                 } else {
                     return message.to_string();
                 }
             }
-        }
-    }
     err
 }
 

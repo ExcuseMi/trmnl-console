@@ -54,7 +54,7 @@ impl WebhookPayloadData {
         Self {
             width: args.width,
             scale: args.scale,
-            bar: WebhookPayloadBar::new(&args),
+            bar: WebhookPayloadBar::new(args),
             content: snapshot.to_string(),
         }
     }

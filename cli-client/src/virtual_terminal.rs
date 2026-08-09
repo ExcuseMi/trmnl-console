@@ -44,6 +44,7 @@ enum TerminalOpMode {
 }
 
 impl TerminalOpMode {
+    #[allow(clippy::type_complexity)]
     pub(crate) fn into_possible_parts(
         self,
     ) -> (

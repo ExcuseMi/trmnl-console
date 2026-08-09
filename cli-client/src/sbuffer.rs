@@ -631,9 +631,7 @@ impl SBuffer {
         if output.last().copied() == Some(LINE_BREAK) {
             output.pop();
         } else {
-            for _ in 0..remaining_chars_in_line {
-                output.push(SPACE);
-            }
+            output.extend(vec![SPACE; remaining_chars_in_line]);
         }
 
         if span_was_open {
