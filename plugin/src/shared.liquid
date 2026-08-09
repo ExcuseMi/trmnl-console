@@ -7,6 +7,14 @@
         url(https://capypara.de/trmnl-console/depature-mono/DepartureMono-Regular.otf) format("opentype");
     }
 
+    @font-face {
+        font-family: Departure Mono;
+        font-weight: bold;
+        src: url(https://capypara.de/trmnl-console/depature-mono/DepartureMono-Bold.woff2) format("woff2"),
+        url(https://capypara.de/trmnl-console/depature-mono/DepartureMono-Bold.woff) format("woff"),
+        url(https://capypara.de/trmnl-console/depature-mono/DepartureMono-Bold.ttf) format("truetype");
+    }
+
     .trmnl-console {
         font-family: Departure Mono, monospace;
         font-size: 11px;
@@ -1406,7 +1414,7 @@
     }
 
     .tc--bold {
-        text-shadow: -.05px 0, 0 .05px, .05px 0, 0 -.05px;
+        font-weight: bold;
     }
 
     .tc--dim {
@@ -1683,6 +1691,10 @@
         const inputSBuffer = document.querySelector("#{{ id_prefix }}-compressed").textContent;
 
         outputPre.innerHTML = sbuffer_to_html(inputSBuffer, {{ data.width }});
+
+        terminalize().then(function () {
+            console.log("screen settled");
+        });
     </script>
 {% endif %}
 {% endtemplate %}

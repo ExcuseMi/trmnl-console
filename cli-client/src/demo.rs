@@ -34,6 +34,7 @@ pub fn render_terminal_output(width: usize, height: usize) -> String {
         let line_content = if Some(line_i) >= start_row_trmnl_logo
             && let Some(logo_line) = logo_buffer.pop()
         {
+            let logo_line = format!("\x1b[38;5;208m{logo_line}\x1b[39m");
             let rest_space = width
                 .saturating_sub(2)
                 .saturating_sub(5)
