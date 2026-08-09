@@ -41,23 +41,17 @@ pub(crate) async fn drive_terminal(args: SubprocArgs) -> ExitCode {
         let exit_code = {
             let mut stream = Stream::connect(socket_name.clone()).await.unwrap();
 
-            // spawn a command with tokio, write its stderr back to `stream` and write its stdout to our stdout
+            // spawn a command with tokio, write its stderr back to `stream`.
             let mut cmd = tokio::process::Command::new(&args.command[0]);
             cmd.args(&args.command[1..]);
             cmd.stdin(std::process::Stdio::inherit());
             cmd.stderr(std::process::Stdio::piped());
-            cmd.stdout(std::process::Stdio::piped());
+            cmd.stdout(std::process::Stdio::inherit());
             let mut child = cmd.spawn().unwrap();
             let mut child_stderr = child.stderr.take().unwrap();
-            let mut child_stdout = child.stdout.take().unwrap();
-            let (_, _, exit_status) = tokio::join!(
+            let (_, exit_status) = tokio::join!(
                 tokio::spawn(async move {
                     tokio::io::copy(&mut child_stderr, &mut stream)
-                        .await
-                        .unwrap();
-                }),
-                tokio::spawn(async move {
-                    tokio::io::copy(&mut child_stdout, &mut tokio::io::stdout())
                         .await
                         .unwrap();
                 }),
