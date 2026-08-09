@@ -13,7 +13,8 @@ pub struct SendWebhookError {
 
 pub enum SendWebhookErrorKind {
     Request(Error),
-    LimitReached,
+    RequestVolumeLimitReached(String),
+    RequestSizeLimitReached(String),
     ServerError(StatusCode, String),
     ClientError(StatusCode, String),
     UnknownError(StatusCode, String),
@@ -28,29 +29,70 @@ pub async fn send_cli(url: String, payload: WebhookPayload) -> u8 {
             match err.kind {
                 SendWebhookErrorKind::Request(err) => {
                     eprintln!(
-                        "{}request failure. Did you enter the correct URL? Details: {}",
+                        "{}request failure. Did you enter the correct URL?\nDetails:\n{}",
                         err_prefix, err
                     )
                 }
-                SendWebhookErrorKind::LimitReached => {
+                SendWebhookErrorKind::RequestVolumeLimitReached(err) => {
                     eprintln!(
-                        "{}reached a limit. Your console output may be too large or you have sent too many webhooks today.\n See https://docs.trmnl.com/go/private-plugins/webhooks for limits.",
-                        err_prefix
+                        "{}reached a limit. You may have sent too many webhooks today.\nSee https://docs.trmnl.com/go/private-plugins/webhooks for limits.\nDetails:\n{}",
+                        err_prefix,
+                        format_err_details(err)
+                    )
+                }
+                SendWebhookErrorKind::RequestSizeLimitReached(err) => {
+                    eprintln!(
+                        "{}reached a limit. Your console output may be too large.\nSee https://docs.trmnl.com/go/private-plugins/webhooks for limits.\nDetails:\n{}",
+                        err_prefix,
+                        format_err_details(err)
                     )
                 }
                 SendWebhookErrorKind::ServerError(status, err) => {
-                    eprintln!("{}server error ({}). Details: {}", err_prefix, status, err)
+                    eprintln!(
+                        "{}server error ({}).\nDetails:\n{}",
+                        err_prefix,
+                        status,
+                        format_err_details(err)
+                    )
                 }
                 SendWebhookErrorKind::ClientError(status, err) => {
-                    eprintln!("{}client error ({}). Details: {}", err_prefix, status, err)
+                    eprintln!(
+                        "{}client error ({}).\nDetails:\n{}",
+                        err_prefix,
+                        status,
+                        format_err_details(err)
+                    )
                 }
                 SendWebhookErrorKind::UnknownError(status, err) => {
-                    eprintln!("{}error ({}). Details: {}", err_prefix, status, err)
+                    eprintln!(
+                        "{}error ({}).\nDetails:\n{}",
+                        err_prefix,
+                        status,
+                        format_err_details(err)
+                    )
                 }
             };
             90
         }
     }
+}
+
+fn format_err_details(err: String) -> String {
+    if err.is_empty() {
+        return "not available".to_string();
+    }
+    if let Ok(json) = serde_json::from_str::<Value>(&err) {
+        if let Value::Object(obj) = json {
+            if let Some(message) = obj.get("message") {
+                if let Value::String(message) = message {
+                    return message.clone();
+                } else {
+                    return message.to_string();
+                }
+            }
+        }
+    }
+    err
 }
 
 pub async fn send(url: String, payload: WebhookPayload) -> Result<(), SendWebhookError> {
@@ -86,7 +128,13 @@ async fn send_single_payload(
             if response.status().is_success() {
                 Ok(())
             } else if response.status() == StatusCode::TOO_MANY_REQUESTS {
-                Err(SendWebhookErrorKind::LimitReached)
+                Err(SendWebhookErrorKind::RequestVolumeLimitReached(
+                    response.text().await.unwrap_or_default(),
+                ))
+            } else if response.status() == StatusCode::UNPROCESSABLE_ENTITY {
+                Err(SendWebhookErrorKind::RequestSizeLimitReached(
+                    response.text().await.unwrap_or_default(),
+                ))
             } else if response.status().is_server_error() {
                 Err(SendWebhookErrorKind::ServerError(
                     response.status(),
