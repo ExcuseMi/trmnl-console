@@ -1,3 +1,10 @@
+"""
+NOTE: At the time of writing, TRMNL does not actually run this serverless transport,
+since it is not supported for webhooks.
+
+If this transform does not run, the decompression is instead done in JavaScript, see shared.liquid.
+"""
+
 from dataclasses import dataclass
 
 
@@ -79,14 +86,7 @@ def html_encode_handle_class_change(output: list[str], span_was_open: bool, clas
     if span_was_open:
         output.append("</span>")
     if not class_list.is_empty():
-        output.append('<span class="')
-        is_first = True
-        for class_name in class_list.as_html_classes():
-            if not is_first:
-                output.append(' ')
-            output.append(class_name)
-            is_first = False
-        output.append('">')
+        output.append(f'<span class="{' '.join(class_list.as_html_classes())}">')
         return True
     return False
 
@@ -104,8 +104,7 @@ def html_push_normal_char(output: list[str], c: str) -> None:
 
 
 def html_handle_line_break(output: list[str], remaining_chars_in_line: int) -> None:
-    for _ in range(remaining_chars_in_line):
-        output.append(SBufferChar.SPACE)
+    output.append(SBufferChar.SPACE * remaining_chars_in_line)
     output.append(SBufferChar.LINE_BREAK)
 
 
@@ -229,9 +228,6 @@ def run(input):
                 return {"error": f"failed to decode console output: {e.__class__.__name__}: {e}"}
         else:
             return {"error": "plugin did not receive console input and width."}
-        # preformat scale class
-        if "scale" in input["data"]:
-            input["data"]["scale"] = f"tc--x{input["data"]["scale"]}"
     else:
         return {"error": "plugin did not receive any data yet."}
     return input

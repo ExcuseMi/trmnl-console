@@ -1,6 +1,3 @@
-{% if data.content %}
-    {% assign error = "TRMNL did not run the transform function required to render the plugin." %}
-{% endif %}
 {% if error %}
     {% render "error_info", error: error, trmnl: trmnl %}
 {% else %}

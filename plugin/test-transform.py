@@ -191,13 +191,13 @@ class SBufferToHtmlTest(unittest.TestCase):
 class RunTest(unittest.TestCase):
     def test_transforms_content_using_width(self):
         result = run({"data": {"content": V + "hi", "width": 4}})
-        self.assertEqual(result, {"data": {"content": "hi  ", "width": 4}})
+        self.assertEqual(result, {"data": {"content_transformed": "hi  ", "width": 4}})
 
-    def test_input_without_data_is_untouched(self):
-        self.assertEqual(run({"foo": 1}), {"foo": 1})
+    def test_input_without_data_returns_error(self):
+        self.assertEqual(run({"foo": 1}), {"error": "plugin did not receive any data yet."})
 
-    def test_data_without_content_is_untouched(self):
-        self.assertEqual(run({"data": {"x": 1}}), {"data": {"x": 1}})
+    def test_data_without_content_returns_error(self):
+        self.assertEqual(run({"data": {"x": 1}}), {"error": "plugin did not receive console input and width."})
 
 
 if __name__ == "__main__":

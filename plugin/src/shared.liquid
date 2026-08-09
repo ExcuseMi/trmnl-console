@@ -1421,12 +1421,10 @@
         text-decoration: underline;
     }
 </style>
+{% assign id_prefix = "tc--" | append_random %}
 <div class="layout layout--left layout--top">
-    <!--
-        on 1x: 111 x 29 ( x ?? w/o bar )
-        on 2x: ?? x ?? ( x ?? w/o bar )
-    -->
-    <pre class="trmnl-console {{ data.scale }}">{{ data.content_transformed | raw }}</pre>
+    <pre class="trmnl-console tc--x{{ data.scale }}"
+         id="{{ id_prefix }}-console">{{ data.content_transformed | raw }}</pre>
 </div>
 {% if data.bar %}
     <div class="title_bar">
@@ -1442,6 +1440,250 @@
             <span class="instance">{{ data.bar.right }}</span>
         {% endif %}
     </div>
+{% endif %}
+{% if data.content %}
+    <!-- If we end up here, then the serverless transform didn't run - let's do clientside decompression -->
+    <script type="application/sbuffer" id="{{ id_prefix }}-compressed">{{ data.content | raw }}</script>
+    <script type="text/javascript" class="tc--decompress-script">
+        /*
+         * This converts the custom "SBuffer" (version 1) compressed terminal data
+         * to HTML. See transform.py.
+         */
+        function sbuffer_to_html(sbuffer, width) {
+            const START = '\uE000';
+            const SPACE = " ";
+            const LINE_BREAK = "\n";
+            const FG_START = '\uE100';
+            const FG_END = '\uE200';
+            const BG_START = FG_END;
+            const BG_END = '\uE300';
+            const ESCAPE = BG_END;
+            const REPEAT = ESCAPE;
+            const REPEAT_END = '\uE400';
+            const FG_RESET = REPEAT_END;
+            const BG_RESET = '\uE401';
+            const BOLD = '\uE402';
+            const DIM = '\uE403';
+            const ITAL = '\uE404';
+            const UNDL = '\uE405';
+
+            const HTML_BOLD = "tc--bold";
+            const HTML_DIM = "tc--dim";
+            const HTML_ITAL = "tc--ital";
+            const HTML_UNDL = "tc--undl";
+            const HTML_PREFIX_FG = "tc--fg-";
+            const HTML_PREFIX_BG = "tc--bg-";
+
+            function html_fg(color_idx) {
+                return `${HTML_PREFIX_FG}${color_idx}`;
+            }
+
+            function html_bg(color_idx) {
+                return `${HTML_PREFIX_BG}${color_idx}`;
+            }
+
+            class SBufferHtmlClassList {
+                fg = null;
+                bg = null;
+                bold = false;
+                dim = false;
+                ital = false;
+                undl = false;
+
+                is_empty() {
+                    return this.fg === null && this.bg === null && !this.bold && !this.dim && !this.ital && !this.undl;
+                }
+
+                as_html_classes() {
+                    let out = [];
+                    if (this.fg !== null) {
+                        out.push(html_fg(this.fg));
+                    }
+                    if (this.bg !== null) {
+                        out.push(html_bg(this.bg));
+                    }
+                    if (this.bold) {
+                        out.push(HTML_BOLD);
+                    }
+                    if (this.dim) {
+                        out.push(HTML_DIM);
+                    }
+                    if (this.ital) {
+                        out.push(HTML_ITAL);
+                    }
+                    if (this.undl) {
+                        out.push(HTML_UNDL);
+                    }
+
+                    return out
+                }
+            }
+
+            /** encodes a class change by appending to output, returns whether span is now open */
+            function html_encode_handle_class_change(output, spawn_was_open, class_list) {
+                if (spawn_was_open) {
+                    output.push("</span>");
+                }
+                if (!class_list.is_empty()) {
+                    output.push(`<span class="${class_list.as_html_classes().join(' ')}">`);
+                    return true;
+                }
+                return false;
+            }
+
+            function html_push_normal_char(output, c) {
+                switch (c) {
+                    case '<' :
+                        output.push("&lt;");
+                        break;
+                    case '>' :
+                        output.push("&gt;");
+                        break;
+                    case '&' :
+                        output.push("&amp;");
+                        break;
+                    default:
+                        output.push(c);
+                }
+            }
+
+            function html_handle_line_break(output, remaining_chars_in_line) {
+                output.push(SPACE.repeat(remaining_chars_in_line), LINE_BREAK);
+            }
+
+            const class_list = new SBufferHtmlClassList();
+            const output = [];
+            let span_was_open = false;
+            let new_span_pending = false;
+
+            const sb_iter = Iterator.from(sbuffer);
+            if (sb_iter.next().value !== START) {
+                throw new Error("Invalid SBuffer format");
+            }
+
+            let remaining_chars_in_line = width;
+            let next, n;
+            for (let c of sb_iter) {
+                switch (c) {
+                    case LINE_BREAK:
+                        if (new_span_pending) {
+                            span_was_open = html_encode_handle_class_change(output, span_was_open, class_list);
+                            new_span_pending = false;
+                        }
+                        html_handle_line_break(output, remaining_chars_in_line);
+                        remaining_chars_in_line = width;
+                        break;
+                    case FG_RESET:
+                        class_list.fg = null;
+                        new_span_pending = true;
+                        break;
+                    case BG_RESET:
+                        class_list.bg = null;
+                        new_span_pending = true;
+                        break;
+                    case ESCAPE:
+                        next = sb_iter.next();
+                        if (next.done) {
+                            continue;
+                        }
+                        c = next.value;
+                        if (new_span_pending) {
+                            span_was_open = html_encode_handle_class_change(output, span_was_open, class_list);
+                            new_span_pending = false;
+                        }
+                        if (c === LINE_BREAK) {
+                            html_handle_line_break(output, remaining_chars_in_line);
+                            remaining_chars_in_line = width;
+                        } else {
+                            html_push_normal_char(output, c);
+                            remaining_chars_in_line = Math.max(0, remaining_chars_in_line - 1);
+                        }
+                        break;
+                    case BOLD:
+                        class_list.bold = !class_list.bold;
+                        new_span_pending = true;
+                        break;
+                    case DIM:
+                        class_list.dim = !class_list.dim;
+                        new_span_pending = true;
+                        break;
+                    case ITAL:
+                        class_list.ital = !class_list.ital;
+                        new_span_pending = true;
+                        break;
+                    case UNDL:
+                        class_list.undl = !class_list.undl;
+                        new_span_pending = true;
+                        break;
+                    default:
+                        if (c >= FG_START && c < FG_END) {
+                            class_list.fg = c.charCodeAt(0) - FG_START.charCodeAt(0);
+                            new_span_pending = true;
+                        } else if (c >= BG_START && c < BG_END) {
+                            class_list.bg = c.charCodeAt(0) - BG_START.charCodeAt(0);
+                            new_span_pending = true;
+                        } else if (c >= REPEAT && c < REPEAT_END) {
+                            n = c.charCodeAt(0) - REPEAT.charCodeAt(0) + 1;
+                            next = sb_iter.next();
+                            if (next.done) {
+                                continue;
+                            }
+                            c = next.value;
+                            if (new_span_pending) {
+                                span_was_open = html_encode_handle_class_change(output, span_was_open, class_list);
+                                new_span_pending = false;
+                            }
+                            if (c === LINE_BREAK) {
+                                html_handle_line_break(output, remaining_chars_in_line);
+                                remaining_chars_in_line = width;
+                            } else {
+                                for (let i = 0; i < n; i++) {
+                                    html_push_normal_char(output, c);
+                                }
+                                remaining_chars_in_line = Math.max(0, remaining_chars_in_line - n);
+                            }
+                        } else {
+                            if (new_span_pending) {
+                                span_was_open = html_encode_handle_class_change(output, span_was_open, class_list);
+                                new_span_pending = false;
+                            }
+                            html_push_normal_char(output, c);
+                            remaining_chars_in_line = Math.max(0, remaining_chars_in_line - 1);
+                        }
+                        break;
+                }
+            }
+
+            if (new_span_pending) {
+                span_was_open = html_encode_handle_class_change(output, span_was_open, class_list);
+            }
+            let popped = false;
+            if (output.length > 0) {
+                let last_output_elem = output[output.length - 1];
+                let last_output_lem_last_char = last_output_elem[last_output_elem.length - 1];
+                if (last_output_lem_last_char === LINE_BREAK) {
+                    output.pop();
+                    popped = true;
+                }
+            }
+            if (!popped) {
+                output.push(" ".repeat(remaining_chars_in_line));
+            }
+
+            if (span_was_open) {
+                output.push("</span>");
+            }
+
+            return output.join("");
+        }
+
+        // ---
+
+        const outputPre = document.querySelector("#{{ id_prefix }}-console");
+        const inputSBuffer = document.querySelector("#{{ id_prefix }}-compressed").textContent;
+
+        outputPre.innerHTML = sbuffer_to_html(inputSBuffer, {{ data.width }});
+    </script>
 {% endif %}
 {% endtemplate %}
 
