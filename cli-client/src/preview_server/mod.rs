@@ -17,8 +17,6 @@ use warp::http::StatusCode;
 use warp::http::header::CONTENT_TYPE;
 use warp::{Filter, Reply};
 
-const PORT: u16 = 3030;
-
 static PLUGIN_LIQUID: &str = include_str!("../../../plugin/src/shared.liquid");
 static RENDERER_LIQUID: &str = include_str!("../../preview-assets/template/renderer.liquid");
 static PREVIEWER_LIQUID: &str = include_str!("../../preview-assets/template/previewer.liquid");
@@ -71,10 +69,17 @@ pub async fn launch(height: u16, payload: WebhookPayload) -> u8 {
     let trmnl16bold_woff2 = warp::path!("fonts" / "TRMNL16-Bold.woff2")
         .map(|| warp::reply::with_header(TRMNL16_BOLD_WOFF2, CONTENT_TYPE, "font/woff2"));
 
-    let listener = match tokio::net::TcpListener::bind(("127.0.0.1", PORT)).await {
+    let listener = match tokio::net::TcpListener::bind(("127.0.0.1", 0)).await {
         Ok(listener) => listener,
         Err(err) => {
-            eprintln!("trmnl-console: failed to start preview server on port {PORT}: {err}");
+            eprintln!("trmnl-console: failed to start preview server: {err}");
+            return 91;
+        }
+    };
+    let port = match listener.local_addr() {
+        Ok(addr) => addr.port(),
+        Err(err) => {
+            eprintln!("trmnl-console: failed to start preview server: {err}");
             return 91;
         }
     };
@@ -93,10 +98,10 @@ pub async fn launch(height: u16, payload: WebhookPayload) -> u8 {
     );
 
     if env::var_os("TRMNL_CONSOLE_NO_OPEN").is_none() {
-        open::that(format!("http://127.0.0.1:{PORT}")).ok();
+        open::that(format!("http://127.0.0.1:{port}")).ok();
     }
 
-    println!("trmnl-console: Done rendering. Preview server started on http://127.0.0.1:{PORT}.");
+    println!("trmnl-console: Done rendering. Preview server started on http://127.0.0.1:{port}.");
     println!(
         "trmnl-console: We tried to open your browser, if that didn't work, open the link manually."
     );

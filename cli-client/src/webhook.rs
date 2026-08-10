@@ -12,6 +12,7 @@ pub struct SendWebhookError {
 }
 
 pub enum SendWebhookErrorKind {
+    ClientBuild(Error),
     Request(Error),
     RequestVolumeLimitReached(String),
     RequestSizeLimitReached(String),
@@ -27,6 +28,12 @@ pub async fn send_cli(url: String, payload: WebhookPayload) -> u8 {
             let err_prefix = "trmnl-console: failed updating plugin:\n"
                 .if_supports_color(Stderr, |text| text.red());
             match err.kind {
+                SendWebhookErrorKind::ClientBuild(err) => {
+                    eprintln!(
+                        "{}could not initialize the HTTP client.\nDetails:\n{}",
+                        err_prefix, err
+                    )
+                }
                 SendWebhookErrorKind::Request(err) => {
                     eprintln!(
                         "{}request failure. Did you enter the correct URL?\nDetails:\n{}",
@@ -95,10 +102,15 @@ fn format_err_details(err: String) -> String {
 }
 
 pub async fn send(url: String, payload: WebhookPayload) -> Result<(), SendWebhookError> {
-    let client = reqwest::Client::builder()
-        .user_agent(USER_AGENT)
-        .build()
-        .unwrap();
+    let client = match reqwest::Client::builder().user_agent(USER_AGENT).build() {
+        Ok(client) => client,
+        Err(err) => {
+            return Err(SendWebhookError {
+                was_metadata_sent: false,
+                kind: SendWebhookErrorKind::ClientBuild(err),
+            });
+        }
+    };
 
     let (metadata_payload, content_payload) = payload.into_webhook_parts();
 
