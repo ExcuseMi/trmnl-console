@@ -1,6 +1,6 @@
-use interprocess::local_socket::prelude::*;
+use interprocess::local_socket::tokio::Stream;
 use interprocess::local_socket::tokio::prelude::*;
-use interprocess::local_socket::{GenericFilePath, tokio::Stream};
+use interprocess::local_socket::{GenericFilePath, GenericNamespaced};
 #[cfg(unix)]
 use std::os::unix::process::ExitStatusExt;
 use std::path::PathBuf;
@@ -9,14 +9,19 @@ use tokio::io::AsyncWriteExt;
 
 pub(crate) const INTERNAL_SUBPROCESS_MODE_FLAG: &str = "--internal-subprocess-mode";
 pub(crate) const SOCKET_PATH: &str = "--socket-path";
+pub(crate) const SOCKET_NAME: &str = "--socket-name";
 
 #[derive(Debug, clap::Parser)]
 pub struct SubprocArgs {
     #[arg(long)]
     #[allow(unused)] // this is never checked: we check if this flag exists in main.rs
     internal_subprocess_mode: bool,
-    #[arg(long)]
-    socket_path: PathBuf,
+    /// Namespaced socket.
+    #[arg(long, group = "socket")]
+    socket_name: Option<String>,
+    /// File path socket.
+    #[arg(long, group = "socket")]
+    socket_path: Option<PathBuf>,
     command: Vec<String>,
 }
 
@@ -35,7 +40,14 @@ impl SubprocArgs {
 pub(crate) async fn drive_terminal(args: SubprocArgs) -> ExitCode {
     let cmd_mode = args.cmd_mode();
 
-    let socket_name = args.socket_path.to_fs_name::<GenericFilePath>().unwrap();
+    let socket_name = if let Some(name) = args.socket_name {
+        name.to_ns_name::<GenericNamespaced>().unwrap()
+    } else {
+        args.socket_path
+            .unwrap()
+            .to_fs_name::<GenericFilePath>()
+            .unwrap()
+    };
 
     if cmd_mode {
         let exit_code = {

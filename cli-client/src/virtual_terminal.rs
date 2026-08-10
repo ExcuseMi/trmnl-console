@@ -14,15 +14,16 @@
 // TODO: consider working directly with raw wezterm and implementing pty driving ourselves.
 
 use crate::sbuffer::SBuffer;
-use crate::terminal_subprocess::{INTERNAL_SUBPROCESS_MODE_FLAG, SOCKET_PATH};
+use crate::terminal_subprocess::{INTERNAL_SUBPROCESS_MODE_FLAG, SOCKET_NAME, SOCKET_PATH};
 use interprocess::local_socket::prelude::*;
 use interprocess::local_socket::tokio::prelude::*;
-use interprocess::local_socket::{GenericFilePath, ListenerOptions};
+use interprocess::local_socket::{GenericFilePath, GenericNamespaced, ListenerOptions, Name};
 use shadow_terminal::Protocol;
 use shadow_terminal::pty::{BytesFromPTY, BytesFromSTDIN};
 use shadow_terminal::shadow_terminal::{Config, ShadowTerminal};
 use std::env::current_exe;
 use std::ffi::OsString;
+use std::path::PathBuf;
 use std::pin::Pin;
 use std::sync::Arc;
 use std::sync::atomic::{AtomicBool, Ordering};
@@ -58,12 +59,27 @@ impl TerminalOpMode {
     }
 }
 
+#[derive(Debug, Clone)]
+enum SocketType {
+    Path(PathBuf),
+    Namespaced(String),
+}
+
+impl SocketType {
+    fn as_name(&self) -> std::io::Result<Name<'static>> {
+        match self.clone() {
+            SocketType::Path(x) => x.to_fs_name::<GenericFilePath>(),
+            SocketType::Namespaced(x) => x.to_ns_name::<GenericNamespaced>(),
+        }
+    }
+}
+
 pub struct VirtualTerminal {
     command_finished: Arc<(Notify, AtomicBool)>,
     snapshot_req_tx: tokio::sync::oneshot::Sender<()>,
     snapshot_rx: tokio::sync::oneshot::Receiver<Result<SBuffer, u8>>,
     #[allow(unused)] // for Drop
-    socket_tempdir: TempDir,
+    socket_tempdir: Option<TempDir>,
 }
 
 impl VirtualTerminal {
@@ -100,15 +116,17 @@ impl VirtualTerminal {
 
         let (read, cmd) = op.into_possible_parts();
 
-        // Set up socket for child process
-        let socket_tempdir = TempDir::new()?;
-        let temp_socket_file_path = socket_tempdir.path().join("stdin.socket");
+        let (socket_type, socket_tempdir) = if GenericNamespaced::is_supported() {
+            let pid = std::process::id();
+            let name = format!("trmnl-console-{pid}.sock");
+            (SocketType::Namespaced(name), None)
+        } else {
+            let socket_tempdir = TempDir::new()?;
+            let path = socket_tempdir.path().join("stdin.socket");
+            (SocketType::Path(path), Some(socket_tempdir))
+        };
         let server = ListenerOptions::new()
-            .name(
-                temp_socket_file_path
-                    .clone()
-                    .to_fs_name::<GenericFilePath>()?,
-            )
+            .name(socket_type.as_name()?)
             .create_tokio()?;
 
         let exit_code2 = exit_code.clone();
@@ -159,12 +177,20 @@ impl VirtualTerminal {
             .enable_all()
             .build()?;
 
-        let mut command: Vec<OsString> = vec![
-            current_exe()?.into(),
-            INTERNAL_SUBPROCESS_MODE_FLAG.into(),
-            SOCKET_PATH.into(),
-            temp_socket_file_path.into(),
-        ];
+        let mut command: Vec<OsString> = match socket_type {
+            SocketType::Namespaced(name) => vec![
+                current_exe()?.into(),
+                INTERNAL_SUBPROCESS_MODE_FLAG.into(),
+                SOCKET_NAME.into(),
+                name.into(),
+            ],
+            SocketType::Path(path) => vec![
+                current_exe()?.into(),
+                INTERNAL_SUBPROCESS_MODE_FLAG.into(),
+                SOCKET_PATH.into(),
+                path.into(),
+            ],
+        };
         if let Some(cmd) = cmd {
             command.push("--".into());
             command.extend(cmd);
