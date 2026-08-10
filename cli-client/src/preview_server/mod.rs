@@ -9,6 +9,7 @@ use regex::Regex;
 use serde::Deserialize;
 use std::env;
 use std::sync::Arc;
+#[cfg(unix)]
 use tokio::select;
 #[cfg(unix)]
 use tokio::signal::unix::{SignalKind, signal};

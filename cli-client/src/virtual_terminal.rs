@@ -94,7 +94,7 @@ impl VirtualTerminal {
         let mut command: Vec<OsString> = command.into_iter().map(|x| x.as_ref().into()).collect();
         // Resolve the program against our own PATH. portable-pty may use a different path.
         if let Some(program) = command.first_mut() {
-            *program = which::which(&*program)
+            *program = resolve_program(program)
                 .map_err(|err| {
                     std::io::Error::new(
                         std::io::ErrorKind::NotFound,
@@ -306,6 +306,34 @@ impl VirtualTerminal {
             Err(_) => Err(SnapshotError::TerminalTimedOut),
         }
     }
+}
+
+/// Resolve a program name against our own PATH (see the comment in [`VirtualTerminal::run_with_cmd`]).
+#[cfg(not(windows))]
+fn resolve_program(program: &std::ffi::OsStr) -> which::Result<PathBuf> {
+    which::which(program)
+}
+
+/// Resolve a program name against our own PATH (see the comment in [`VirtualTerminal::run_with_cmd`]).
+///
+/// A stray double quote in PATH (seen in the wild from a malformed registry entry) makes
+/// the quote-aware PATH splitting of Rust's std treat everything after it as a single
+/// bogus entry, hiding the rest of the PATH. Quotes are never valid in Windows paths, so
+/// strip them and split plainly on `;`, like cmd.exe and PowerShell do.
+#[cfg(windows)]
+fn resolve_program(program: &std::ffi::OsStr) -> which::Result<PathBuf> {
+    use std::os::windows::ffi::{OsStrExt, OsStringExt};
+
+    let sanitized_path = std::env::var_os("PATH").map(|path| {
+        std::ffi::OsString::from_wide(
+            &path
+                .encode_wide()
+                .filter(|&unit| unit != u16::from(b'"'))
+                .collect::<Vec<u16>>(),
+        )
+    });
+    let cwd = std::env::current_dir().map_err(|_| which::Error::CannotFindBinaryPath)?;
+    which::which_in(program, sanitized_path, cwd)
 }
 
 fn take_snapshot(
