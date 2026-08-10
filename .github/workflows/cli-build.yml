@@ -68,10 +68,14 @@ jobs:
           # autodetection fails
           CARGO_TARGET_AARCH64_UNKNOWN_LINUX_GNU_LINKER: aarch64-linux-gnu-gcc
       # -- Artifact upload
+      # https://github.com/actions/upload-artifact/issues/785 - so we rename the output file and then upload it
+      - name: rename artifact
+        run: |
+          cd cli-client/target/${{ matrix.target }}/release/
+          mv trmnl-console trmnl-console-${{ env.PACKAGE_VERSION }}-${{ env.COMMIT_SHORT_SHA }}-${{ matrix.target }}
       - uses: actions/upload-artifact@v7
         with:
-          path: cli-client/target/${{ matrix.target }}/release/trmnl-console${{ env.EXE_SUFFIX }}
-          name: trmnl-console-${{ env.PACKAGE_VERSION }}-${{ env.COMMIT_SHORT_SHA }}-${{ matrix.target }}${{ env.EXE_SUFFIX }}
+          path: cli-client/target/${{ matrix.target }}/release/trmnl-console-${{ env.PACKAGE_VERSION }}-${{ env.COMMIT_SHORT_SHA }}-${{ matrix.target }}
           archive: false
 
   build-default-windows-msvc:
@@ -104,10 +108,15 @@ jobs:
         run: cargo build --release --target ${{ matrix.target }}
         working-directory: cli-client
       # -- Artifact upload
+      # https://github.com/actions/upload-artifact/issues/785 - so we rename the output file and then upload it
+      - name: rename artifact
+        run: |
+          cd cli-client/target/${{ matrix.target }}/release/
+          mv trmnl-console.exe trmnl-console-${{ env.PACKAGE_VERSION }}-${{ env.COMMIT_SHORT_SHA }}-${{ matrix.target }}.exe
+        shell: bash
       - uses: actions/upload-artifact@v7
         with:
-          path: cli-client/target/${{ matrix.target }}/release/trmnl-console.exe
-          name: trmnl-console-${{ env.PACKAGE_VERSION }}-${{ env.COMMIT_SHORT_SHA }}-${{ matrix.target }}.exe
+          path: cli-client/target/${{ matrix.target }}/release/trmnl-console-${{ env.PACKAGE_VERSION }}-${{ env.COMMIT_SHORT_SHA }}-${{ matrix.target }}.exe
           archive: false
 
   build-default-darwin:
@@ -137,8 +146,12 @@ jobs:
         run: cargo build --release --target ${{ matrix.target }}
         working-directory: cli-client
       # -- Artifact upload
+      # https://github.com/actions/upload-artifact/issues/785 - so we rename the output file and then upload it
+      - name: rename artifact
+        run: |
+          cd cli-client/target/${{ matrix.target }}/release/
+          mv trmnl-console trmnl-console-${{ env.PACKAGE_VERSION }}-${{ env.COMMIT_SHORT_SHA }}-${{ matrix.target }}
       - uses: actions/upload-artifact@v7
         with:
-          path: cli-client/target/${{ matrix.target }}/release/trmnl-console
-          name: trmnl-console-${{ env.PACKAGE_VERSION }}-${{ env.COMMIT_SHORT_SHA }}-${{ matrix.target }}
+          path: cli-client/target/${{ matrix.target }}/release/trmnl-console-${{ env.PACKAGE_VERSION }}-${{ env.COMMIT_SHORT_SHA }}-${{ matrix.target }}
           archive: false
