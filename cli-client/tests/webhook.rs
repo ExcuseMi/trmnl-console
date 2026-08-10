@@ -80,7 +80,7 @@ fn webhook_metadata_sent_first() {
     assert_eq!(out.code(), EXIT_WEBHOOK_FAILED, "stderr: {}", out.stderr);
     metadata.assert();
     assert_eq!(
-        content.hits(),
+        content.calls(),
         0,
         "content must not be sent before (or after a failed) metadata request"
     );
@@ -98,7 +98,7 @@ fn webhook_rejected_429() {
     let out = run_against(server.url(HOOK_PATH), &[]);
     assert_eq!(out.code(), EXIT_WEBHOOK_FAILED, "stderr: {}", out.stderr);
     assert!(!out.stderr.is_empty(), "an error message is expected");
-    assert!(mock.hits() >= 1);
+    assert!(mock.calls() >= 1);
 }
 
 #[test]
