@@ -20,9 +20,8 @@ fn json_run(extra_args: &[&str]) -> Value {
         out.stdout,
         out.stderr
     );
-    serde_json::from_str(&out.stdout).unwrap_or_else(|e| {
-        panic!("stdout is not valid JSON ({e});\nstdout: {:?}", out.stdout)
-    })
+    serde_json::from_str(&out.stdout)
+        .unwrap_or_else(|e| panic!("stdout is not valid JSON ({e});\nstdout: {:?}", out.stdout))
 }
 
 #[test]
@@ -87,6 +86,10 @@ fn json_top_level_shape() {
     // top-level "data" key. The {"merge_variables": ...} envelope is
     // webhook-only (see tests/webhook.rs and the body builders in common).
     let v = json_run(&[]);
-    let keys: Vec<&String> = v.as_object().expect("top level is an object").keys().collect();
+    let keys: Vec<&String> = v
+        .as_object()
+        .expect("top level is an object")
+        .keys()
+        .collect();
     assert_eq!(keys, ["data"], "unexpected top-level keys: {keys:?}");
 }

@@ -2,7 +2,7 @@
   python314Packages,
   lib,
   rustPlatform,
-  stdenv
+  stdenv,
 }:
 let
   cargo_toml = builtins.fromTOML (builtins.readFile ./Cargo.toml);

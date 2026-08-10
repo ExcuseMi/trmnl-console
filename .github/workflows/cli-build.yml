@@ -1,0 +1,128 @@
+on:
+  push:
+    branches: [ main ]
+  pull_request:
+
+name: CLI Build
+
+jobs:
+  build-no-default:
+    name: Build w/o default features
+    runs-on: ubuntu-22.04
+    steps:
+      - uses: actions/checkout@v7
+      - uses: dtolnay/rust-toolchain@stable
+      - uses: Swatinem/rust-cache@v2
+      - name: cargo build
+        run: cargo build --release --no-default-features
+        working-directory: cli-client
+
+  build-default:
+    name: Default build
+    strategy:
+      matrix:
+        target:
+          - aarch64-unknown-linux-gnu
+          - x86_64-pc-windows-gnu
+          - x86_64-unknown-linux-gnu
+    env:
+      EXE_SUFFIX: ""
+    runs-on: ubuntu-22.04
+    steps:
+      # -- Cross compilation tooling
+      - name: Install aarch64-unknown-linux-gnu tooling
+        if: matrix.target == 'aarch64-unknown-linux-gnu'
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y gcc-aarch64-linux-gnu
+      - name: Install x86_64-pc-windows-msvc tooling
+        if: matrix.target == 'x86_64-pc-windows-gnu'
+        run: |
+          sudo apt-get update
+          sudo apt install -y gcc-mingw-w64-x86-64
+          echo "EXE_SUFFIX=.exe" >> "$GITHUB_ENV"
+      # -- Setup
+      - uses: actions/checkout@v7
+      - uses: dtolnay/rust-toolchain@stable
+        with:
+          target: ${{ matrix.target }}
+      - uses: Swatinem/rust-cache@v2
+      - name: get commit sha & version
+        run: |
+          echo "COMMIT_SHORT_SHA=$(git rev-parse --short ${{ github.sha }})" >> $GITHUB_ENV
+          echo "PACKAGE_VERSION=$(cargo metadata --format-version 1 --no-deps | jq -r '.packages | select( any(.name == "trmnl-console" ) ) | first | .version')" >> "$GITHUB_ENV"
+        working-directory: cli-client
+      # -- Actual build
+      - name: cargo build
+        run: cargo build --release --target ${{ matrix.target }}
+        working-directory: cli-client
+        env:
+          # autodetection fails
+          CARGO_TARGET_AARCH64_UNKNOWN_LINUX_GNU_LINKER: aarch64-linux-gnu-gcc
+      # -- Artifact upload
+      - uses: actions/upload-artifact@v5  # todo: switch to v7 before commit
+        with:
+          path: cli-client/target/${{ matrix.target }}/release/trmnl-console${{ env.EXE_SUFFIX }}
+          name: trmnl-console-${{ env.PACKAGE_VERSION }}-${{ env.COMMIT_SHORT_SHA }}-${{ matrix.target }}${{ env.EXE_SUFFIX }}
+          # todo: re-enable before commit: archive: false
+
+  build-default-windows-msvc:
+    name: Default build (windows-msvc)
+    strategy:
+      matrix:
+        target:
+          - aarch64-pc-windows-msvc
+          - x86_64-pc-windows-msvc
+    runs-on: windows-2019
+    steps:
+      # -- Setup
+      - uses: actions/checkout@v7
+      - uses: dtolnay/rust-toolchain@stable
+        with:
+          target: ${{ matrix.target }}
+      - uses: Swatinem/rust-cache@v2
+      - name: get commit sha & version
+        run: |
+          echo "COMMIT_SHORT_SHA=$(git rev-parse --short ${{ github.sha }})" >> $GITHUB_ENV
+          echo "PACKAGE_VERSION=$(cargo metadata --format-version 1 --no-deps | jq -r '.packages | select( any(.name == "trmnl-console" ) ) | first | .version')" >> "$GITHUB_ENV"
+        shell: bash
+        working-directory: cli-client
+      # -- Actual build
+      - name: cargo build
+        run: cargo build --release --target ${{ matrix.target }}
+        working-directory: cli-client
+      # -- Artifact upload
+      - uses: actions/upload-artifact@v7
+        with:
+          path: cli-client/target/${{ matrix.target }}/release/trmnl-console.exe
+          name: trmnl-console-${{ env.PACKAGE_VERSION }}-${{ env.COMMIT_SHORT_SHA }}-${{ matrix.target }}.exe
+          archive: false
+
+  build-default-darwin:
+    name: Default build (darwin)
+    runs-on: macos-14
+    strategy:
+      matrix:
+        target: [ x86_64-apple-darwin ]
+    steps:
+      # -- Setup
+      - uses: actions/checkout@v7
+      - uses: dtolnay/rust-toolchain@stable
+        with:
+          target: ${{ matrix.target }}
+      - uses: Swatinem/rust-cache@v2
+      - name: get commit sha & version
+        run: |
+          echo "COMMIT_SHORT_SHA=$(git rev-parse --short ${{ github.sha }})" >> $GITHUB_ENV
+          echo "PACKAGE_VERSION=$(cargo metadata --format-version 1 --no-deps | jq -r '.packages | select( any(.name == "trmnl-console" ) ) | first | .version')" >> "$GITHUB_ENV"
+        working-directory: cli-client
+      # -- Actual build
+      - name: cargo build
+        run: cargo build --release --target ${{ matrix.target }}
+        working-directory: cli-client
+      # -- Artifact upload
+      - uses: actions/upload-artifact@v7
+        with:
+          path: cli-client/target/${{ matrix.target }}/release/trmnl-console
+          name: trmnl-console-${{ env.PACKAGE_VERSION }}-${{ env.COMMIT_SHORT_SHA }}-${{ matrix.target }}
+          archive: false

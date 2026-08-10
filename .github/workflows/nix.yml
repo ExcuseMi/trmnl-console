@@ -1,0 +1,23 @@
+on:
+  push:
+    branches: [ main ]
+  pull_request:
+
+name: Nix Checks
+
+jobs:
+  flake-check:
+    name: Nix Flake Checks
+    runs-on: ubuntu-22.04
+    steps:
+      - uses: actions/checkout@v7
+      - uses: DeterminateSystems/nix-installer-action@main
+      - name: nix flake check
+        run: nix flake check --print-build-logs
+  flake-fmt:
+    name: Nix Flake Checks
+    runs-on: ubuntu-22.04
+    steps:
+      - uses: actions/checkout@v7
+      - uses: DeterminateSystems/nix-installer-action@main
+      - run: nix fmt -- --ci

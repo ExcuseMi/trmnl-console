@@ -4,3 +4,5 @@
 .trmnlp.yml
 target
 .venv
+_build
+*.zip

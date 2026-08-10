@@ -10,6 +10,7 @@ use serde::Deserialize;
 use std::env;
 use std::sync::Arc;
 use tokio::select;
+#[cfg(unix)]
 use tokio::signal::unix::{SignalKind, signal};
 use warp::http::Response;
 use warp::http::StatusCode;
@@ -99,12 +100,21 @@ pub async fn launch(height: u16, payload: WebhookPayload) -> u8 {
     println!(
         "trmnl-console: We tried to open your browser, if that didn't work, open the link manually."
     );
-    println!("trmnl-console: Hit CTRL+C to exit.");
 
-    let mut sig = signal(SignalKind::interrupt()).unwrap();
+    #[cfg(unix)]
+    {
+        println!("trmnl-console: Hit CTRL+C to exit.");
 
-    select!( _ = server => {}, _ = sig.recv() => {} );
-    println!();
+        let mut sig = signal(SignalKind::interrupt()).unwrap();
+
+        select!( _ = server => {}, _ = sig.recv() => {} );
+
+        println!();
+    }
+    #[cfg(not(unix))]
+    {
+        let _ = server.await;
+    }
 
     0
 }

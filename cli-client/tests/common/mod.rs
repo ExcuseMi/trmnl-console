@@ -198,7 +198,12 @@ pub fn extract_preview_url(line: &str) -> String {
     let start = line
         .find("http://127.0.0.1:")
         .unwrap_or_else(|| panic!("no preview URL found in stdout line: {line:?}"));
-    line[start..].split_whitespace().next().unwrap().to_string()
+    line[start..]
+        .split_whitespace()
+        .next()
+        .unwrap()
+        .trim_end_matches('.')
+        .to_string()
 }
 
 // =====================================================================

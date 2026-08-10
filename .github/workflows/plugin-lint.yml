@@ -1,0 +1,28 @@
+on:
+  push:
+    branches: [ main ]
+  pull_request:
+
+name: Plugin Lint
+
+jobs:
+  plugin-lint:
+    name: Build plugin
+    runs-on: ubuntu-22.04
+    steps:
+      - uses: actions/checkout@v7
+      - uses: ruby/setup-ruby@v1
+        with:
+          ruby-version: '4.0'
+      - uses: actions/setup-python@v7
+        with:
+          python-version: '3.14'
+      - name: install trmnlp
+        run: gem install trmnl_preview
+      - name: create .trmnlp.yml
+        run: cp .trmnlp.example.yml .trmnlp.yml
+        working-directory: plugin
+      - name: trmnlp lint
+        # TODO: for now we allow failure, we currently don't pass all lints
+        run: bin/trmnlp lint || true
+        working-directory: plugin

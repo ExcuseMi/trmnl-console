@@ -32,7 +32,10 @@ fn command_newlines_via_pty() {
 
 #[test]
 fn nonzero_exit_propagates() {
-    let out = Cmd::new().size(4, 2).args(["--", "sh", "-c", "exit 7"]).run();
+    let out = Cmd::new()
+        .size(4, 2)
+        .args(["--", "sh", "-c", "exit 7"])
+        .run();
     assert_eq!(out.code(), 7, "stderr: {}", out.stderr);
     assert!(
         !out.stderr.is_empty(),
@@ -53,7 +56,14 @@ fn wait_time_kills_and_snapshots() {
     // nonzero_exit_propagates. Flip the constant if the design changes.
     let out = Cmd::new()
         .size(4, 2)
-        .args(["--wait-time", "0.5", "--", "sh", "-c", "printf hi; sleep 100"])
+        .args([
+            "--wait-time",
+            "0.5",
+            "--",
+            "sh",
+            "-c",
+            "printf hi; sleep 100",
+        ])
         .run();
     if common::WAIT_TIME_KILL_SNAPSHOTS {
         assert_eq!(out.code(), 0, "stderr: {}", out.stderr);

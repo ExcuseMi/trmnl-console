@@ -8,6 +8,7 @@
   openssl,
   pkg-config,
   nodejs,
+  act,
 }:
 let
   overrides = (builtins.fromTOML (builtins.readFile ./rust-toolchain.toml));
@@ -49,5 +50,6 @@ mkShell {
     openssl
     pkg-config
     nodejs
+    act
   ];
 }

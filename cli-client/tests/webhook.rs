@@ -8,9 +8,7 @@
 
 mod common;
 
-use common::{
-    Cmd, EXIT_WEBHOOK_FAILED, PLAIN, expected_content_body, expected_metadata_body,
-};
+use common::{Cmd, EXIT_WEBHOOK_FAILED, PLAIN, expected_content_body, expected_metadata_body};
 use httpmock::prelude::*;
 
 const HOOK_PATH: &str = "/api/custom_plugins/TEST-UUID";
@@ -139,11 +137,13 @@ fn webhook_scale_and_bar_in_metadata() {
     // metadata request.
     let server = MockServer::start();
     let metadata = server.mock(|when, then| {
-        when.method(POST).path(HOOK_PATH).json_body(expected_metadata_body(
-            4,
-            2,
-            Some(serde_json::json!({"left": "L", "right": null, "icon": null})),
-        ));
+        when.method(POST)
+            .path(HOOK_PATH)
+            .json_body(expected_metadata_body(
+                4,
+                2,
+                Some(serde_json::json!({"left": "L", "right": null, "icon": null})),
+            ));
         then.status(200);
     });
     let content = server.mock(|when, then| {

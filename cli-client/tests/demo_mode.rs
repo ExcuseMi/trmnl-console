@@ -75,7 +75,10 @@ fn demo_mode_renders_example() {
         "demo mode exited with {status:?}; output: {output:?}"
     );
     let trimmed = output.trim();
-    assert!(!trimmed.is_empty(), "demo mode should print an HTML snapshot");
+    assert!(
+        !trimmed.is_empty(),
+        "demo mode should print an HTML snapshot"
+    );
     assert!(
         !trimmed.contains("error:"),
         "output looks like a CLI error: {trimmed:?}"

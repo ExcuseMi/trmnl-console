@@ -76,13 +76,16 @@ pub(crate) async fn drive_terminal(args: SubprocArgs) -> ExitCode {
 fn get_exit_code(exit_status: std::process::ExitStatus) -> u8 {
     match exit_status.code() {
         None => {
-            if cfg!(unix) {
+            #[cfg(unix)]
+            {
                 128 + exit_status
                     .signal()
                     .unwrap_or_default()
                     .try_into()
                     .unwrap_or(1)
-            } else {
+            }
+            #[cfg(not(unix))]
+            {
                 1
             }
         }
