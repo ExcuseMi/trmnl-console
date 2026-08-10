@@ -72,10 +72,10 @@ jobs:
       - name: rename artifact
         run: |
           cd cli-client/target/${{ matrix.target }}/release/
-          mv trmnl-console trmnl-console-${{ env.PACKAGE_VERSION }}-${{ env.COMMIT_SHORT_SHA }}-${{ matrix.target }}
+          mv trmnl-console${{ env.EXE_SUFFIX }} trmnl-console-${{ env.PACKAGE_VERSION }}-${{ env.COMMIT_SHORT_SHA }}-${{ matrix.target }}${{ env.EXE_SUFFIX }}
       - uses: actions/upload-artifact@v7
         with:
-          path: cli-client/target/${{ matrix.target }}/release/trmnl-console-${{ env.PACKAGE_VERSION }}-${{ env.COMMIT_SHORT_SHA }}-${{ matrix.target }}
+          path: cli-client/target/${{ matrix.target }}/release/trmnl-console-${{ env.PACKAGE_VERSION }}-${{ env.COMMIT_SHORT_SHA }}-${{ matrix.target }}${{ env.EXE_SUFFIX }}
           archive: false
 
   build-default-windows-msvc:
