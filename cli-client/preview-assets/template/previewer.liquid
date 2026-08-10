@@ -1,0 +1,133 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <meta charset="utf-8">
+    <title>trmnl-console preview server</title>
+    <style>
+        @media (prefers-color-scheme: dark) {
+            body {
+                background-color: #222;
+                color: #eee;
+            }
+        }
+    </style>
+</head>
+<body>
+<h2>trmnl-console preview</h2>
+<p>Your command has finished. Below you can see how the output renders on various devices.</p>
+<form style="display: flex; gap: 10px; margin-bottom: 10px;">
+    <fieldset>
+        <legend>Dimensions</legend>
+        {{ width }} × {{ height }}
+    </fieldset>
+    <fieldset>
+        <legend><label for="sel-device">Device</label></legend>
+        <select id="sel-device">
+            {% for device in devices %}
+                <option value="{{ device.name }}">{{ device.label }}</option>
+            {% endfor %}
+        </select>
+    </fieldset>
+    <fieldset>
+        <legend><label for="sel-palette">Palette</label></legend>
+        <select id="sel-palette"></select>
+    </fieldset>
+    <fieldset>
+        <legend><label for="sel-theme">Theme</label></legend>
+        <select id="sel-theme">
+            {% for theme in themes %}
+                <option value="{{ theme.name }}">{{ theme.label }}</option>
+            {% endfor %}
+        </select>
+    </fieldset>
+    <fieldset>
+        <legend><label for="sel-orientation">Orientation</label></legend>
+        <select id="sel-orientation">
+            {% for orientation in orientations %}
+                <option value="{{ orientation.name }}">{{ orientation.label }}</option>
+            {% endfor %}
+        </select>
+    </fieldset>
+    <fieldset>
+        <legend><label for="sel-layout">Layout</label></legend>
+        <select id="sel-layout">
+            <option value="full">Full</option>
+            <option value="half_vertical">Half Vertical</option>
+            <option value="half_horizontal">Half Horizontal</option>
+            <option value="quadrant">Quadrant</option>
+        </select>
+    </fieldset>
+</form>
+<iframe id="render-frame"></iframe>
+<script type="text/javascript">
+    window.showAllPalettes = false;
+
+    const toObj =
+        (arr, key) => arr.reduce(
+            (acc, cur) => {
+                {
+                    acc[cur[key]] = cur;
+                    return acc;
+                }
+            }, {});
+
+    const DEVICES = toObj({{ devices | json }}, "name");
+    const PALETTES = toObj({{ palettes | json }}, "id");
+    const THEMES = toObj({{ themes | json }}, "name");
+    const ORIENTATIONS = toObj({{ orientations | json }}, "name");
+
+    /** @type {HTMLIFrameElement} */
+    const IFRAME = document.getElementById("render-frame");
+    /** @type {HTMLSelectElement} */
+    const SEL_DEVICE = document.getElementById("sel-device");
+    /** @type {HTMLSelectElement} */
+    const SEL_PALETTE = document.getElementById("sel-palette");
+    /** @type {HTMLSelectElement} */
+    const SEL_THEME = document.getElementById("sel-theme");
+    /** @type {HTMLSelectElement} */
+    const SEL_ORIENTATION = document.getElementById("sel-orientation");
+    /** @type {HTMLSelectElement} */
+    const SEL_LAYOUT = document.getElementById("sel-layout");
+
+    function deviceChanged() {
+        const selectedDevice = DEVICES[SEL_DEVICE.selectedOptions[0].value];
+
+        SEL_PALETTE.innerHTML = "";
+        for (const palette of Object.values(PALETTES)) {
+            if (window.showAllPalettes || selectedDevice.palette_ids.includes(palette.id)) {
+                SEL_PALETTE.add(new Option(palette.name, palette.id));
+            }
+        }
+        applyPreview();
+    }
+
+    function applyPreview() {
+        const selectedDevice = DEVICES[SEL_DEVICE.selectedOptions[0].value];
+        const selectedPalette = PALETTES[SEL_PALETTE.selectedOptions[0].value];
+        const selectedTheme = THEMES[SEL_THEME.selectedOptions[0].value];
+        const selectedOrientation = ORIENTATIONS[SEL_ORIENTATION.selectedOptions[0].value];
+        const selectedLayout = SEL_LAYOUT.selectedOptions[0].value;
+
+        const deviceClass = Object.values(selectedDevice.css?.classes ?? {}).join(" ");
+        const classes = `${deviceClass} ${selectedPalette.framework_class} ${selectedOrientation.classes} ${selectedTheme.classes}`;
+
+        IFRAME.src = `/render?screen_classes=${classes}&layout=${selectedLayout}`;
+        if (selectedOrientation.name === "landscape") {
+            IFRAME.width = selectedDevice.width;
+            IFRAME.height = selectedDevice.height;
+        } else {
+            IFRAME.width = selectedDevice.height;
+            IFRAME.height = selectedDevice.width;
+        }
+    }
+
+    SEL_DEVICE.addEventListener("change", deviceChanged);
+    SEL_PALETTE.addEventListener("change", applyPreview);
+    SEL_THEME.addEventListener("change", applyPreview);
+    SEL_ORIENTATION.addEventListener("change", applyPreview);
+    SEL_LAYOUT.addEventListener("change", applyPreview);
+
+    deviceChanged();
+</script>
+</body>
+</html>

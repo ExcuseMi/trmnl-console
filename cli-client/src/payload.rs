@@ -14,7 +14,7 @@ pub fn make(args: &Args, snapshot: SBuffer) -> WebhookPayload {
 
 #[derive(Debug, Clone, Serialize)]
 pub struct WebhookPayload {
-    data: WebhookPayloadData,
+    pub data: WebhookPayloadData,
 }
 
 impl WebhookPayload {
@@ -43,10 +43,10 @@ impl WebhookPayload {
 
 #[derive(Debug, Clone, Serialize)]
 pub struct WebhookPayloadData {
-    width: u16,
-    scale: u8,
-    bar: Option<WebhookPayloadBar>,
-    content: String,
+    pub width: u16,
+    pub scale: u8,
+    pub bar: Option<WebhookPayloadBar>,
+    pub content: String,
 }
 
 impl WebhookPayloadData {

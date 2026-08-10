@@ -1,5 +1,7 @@
 mod demo;
 mod payload;
+#[cfg(feature = "preview")]
+mod preview_server;
 mod sbuffer;
 mod terminal_subprocess;
 mod virtual_terminal;
@@ -156,14 +158,14 @@ pub struct Args {
     command: Vec<String>,
 }
 
-#[derive(Debug, Clone, Copy)]
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub enum InputMode {
     Command,
     Stdin,
     Demo,
 }
 
-#[derive(Debug, Clone, Copy)]
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub enum OutputMode {
     HtmlToStdout,
     JsonToStdout,
@@ -210,6 +212,19 @@ pub async fn main() -> ExitCode {
 
     let args = Args::parse();
     let output_mode = args.output_mode();
+
+    if output_mode == OutputMode::PreviewServer {
+        if cfg!(feature = "preview") {
+            // When running the preview server, we tell the user to wait, they might be confused
+            // that the server doesn't immediately start.
+            eprintln!(
+                "trmnl-console: will now run the command and start the preview server afterwards..."
+            );
+        } else {
+            eprintln!("trmnl-console has been compiled without preview support");
+            return ERR.into();
+        }
+    }
 
     let term = match args.input_mode(&std::io::stdin()) {
         InputMode::Command => {
@@ -265,7 +280,17 @@ pub async fn main() -> ExitCode {
                 let payload = payload::make(&args, snapshot);
                 webhook::send_cli(args.url.unwrap(), payload).await as _
             }
-            OutputMode::PreviewServer => todo!("implement preview server"),
+            OutputMode::PreviewServer => {
+                #[cfg(feature = "preview")]
+                {
+                    let payload = payload::make(&args, snapshot);
+                    preview_server::launch(args.height, payload).await as _
+                }
+                #[cfg(not(feature = "preview"))]
+                {
+                    unreachable!()
+                }
+            }
         },
         Err(exit_code) => {
             eprintln!("trmnl-console: child command failed.");

@@ -1,0 +1,53 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <meta charset="utf-8">
+    <link rel="stylesheet" href="/plugins.css"/>
+    <script src="/plugins.js"></script>
+    <meta name="trmnl-framework-version" content="3.2.0"/>
+    <meta name="trmnl-framework-pinned" content="true"/>
+</head>
+
+<body class="environment trmnl">
+<div class="screen {{ screen_classes }} screen--fonts-trmnl">
+    {% if layout == "full" %}
+        <div class="view view--full">
+            {{ content }}
+        </div>
+    {% elsif layout == "half_vertical" %}
+        <div class="mashup mashup--1Lx1R">
+            <div class="view view--half_vertical">
+                {{ content }}
+            </div>
+            <div class="view view--half_vertical">
+                <div class="layout"></div>
+            </div>
+        </div>
+    {% elsif layout == "half_horizontal" %}
+        <div class="mashup mashup--1Tx1B">
+            <div class="view view--half_horizontal">
+                {{ content }}
+            </div>
+            <div class="view view--half_horizontal">
+                <div class="layout"></div>
+            </div>
+        </div>
+    {% elsif layout == "quadrant" %}
+        <div class="mashup mashup--2x2">
+            <div class="view view--quadrant">
+                {{ content }}
+            </div>
+            <div class="view view--quadrant">
+                <div class="layout"></div>
+            </div>
+            <div class="view view--quadrant">
+                <div class="layout"></div>
+            </div>
+            <div class="view view--quadrant">
+                <div class="layout"></div>
+            </div>
+        </div>
+    {% endif %}
+</div>
+</body>
+</html>

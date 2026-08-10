@@ -1,0 +1,3 @@
+[submodule "trmnl-framework"]
+	path = trmnl-framework
+	url = https://github.com/usetrmnl/trmnl-framework.git
