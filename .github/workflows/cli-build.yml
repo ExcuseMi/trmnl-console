@@ -11,6 +11,8 @@ jobs:
     runs-on: ubuntu-22.04
     steps:
       - uses: actions/checkout@v7
+        with:
+          submodules: 'true'
       - uses: dtolnay/rust-toolchain@stable
       - uses: Swatinem/rust-cache@v2
       - name: cargo build
@@ -43,6 +45,8 @@ jobs:
           echo "EXE_SUFFIX=.exe" >> "$GITHUB_ENV"
       # -- Setup
       - uses: actions/checkout@v7
+        with:
+          submodules: 'true'
       - uses: dtolnay/rust-toolchain@stable
         with:
           target: ${{ matrix.target }}
@@ -77,6 +81,8 @@ jobs:
     steps:
       # -- Setup
       - uses: actions/checkout@v7
+        with:
+          submodules: 'true'
       - uses: dtolnay/rust-toolchain@stable
         with:
           target: ${{ matrix.target }}
@@ -107,6 +113,8 @@ jobs:
     steps:
       # -- Setup
       - uses: actions/checkout@v7
+        with:
+          submodules: 'true'
       - uses: dtolnay/rust-toolchain@stable
         with:
           target: ${{ matrix.target }}
