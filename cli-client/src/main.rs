@@ -31,6 +31,8 @@ use tokio::time::timeout;
 ///   In this mode trmnl-console will take the snapshot after `--wait-time` has elapsed, or the
 ///   command has exited with exit code 0. If the command exits with any other exit code,
 ///   trmnl-console will print an error message to stderr and exit with the same exit code.
+///   If the command cannot be found on PATH (or otherwise fails to start), trmnl-console
+///   prints an error message to stderr and exits with exit code 91.
 /// - stdin mode: If no `[COMMAND]` is given and stdin is not a TTY (= you pipe input into
 ///   trmnl-console), then trmnl-console will instead send bytes from stdin to the virtual terminal.
 ///   In this mode trmnl-console will take the snapshot after `--wait-time` has elapsed, or stdin
@@ -245,8 +247,14 @@ pub async fn main() -> ExitCode {
             )
             .await
         }
-    }
-    .expect("failed to init terminal");
+    };
+    let term = match term {
+        Ok(term) => term,
+        Err(err) => {
+            eprintln!("failed to start the virtual terminal: {err}");
+            return ERR.into();
+        }
+    };
 
     match args.wait_time {
         None => term.wait_for_finish().await,

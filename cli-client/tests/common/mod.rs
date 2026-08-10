@@ -65,6 +65,9 @@ pub const PREVIEW_NO_OPEN_ENV: &str = "TRMNL_CONSOLE_NO_OPEN";
 /// Exit code for "TRMNL did not accept the webhook payload / network error".
 pub const EXIT_WEBHOOK_FAILED: i32 = 90;
 
+/// Exit code for "trmnl-console encountered an error" (e.g. command not found).
+pub const EXIT_ERROR: i32 = 91;
+
 // =====================================================================
 // Webhook body builders — the expected wire shape, defined exactly once.
 // See https://docs.trmnl.com/go/private-plugins/webhooks for the format.

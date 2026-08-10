@@ -91,12 +91,19 @@ impl VirtualTerminal {
         height: u16,
         command: impl IntoIterator<Item = impl AsRef<str>>,
     ) -> std::io::Result<Self> {
-        Self::run_with_cmd_internal(
-            width,
-            height,
-            TerminalOpMode::Cmd(command.into_iter().map(|x| x.as_ref().into()).collect()),
-        )
-        .await
+        let mut command: Vec<OsString> = command.into_iter().map(|x| x.as_ref().into()).collect();
+        // Resolve the program against our own PATH. portable-pty may use a different path.
+        if let Some(program) = command.first_mut() {
+            *program = which::which(&*program)
+                .map_err(|err| {
+                    std::io::Error::new(
+                        std::io::ErrorKind::NotFound,
+                        format!("cannot run {}: {err}", program.display()),
+                    )
+                })?
+                .into();
+        }
+        Self::run_with_cmd_internal(width, height, TerminalOpMode::Cmd(command)).await
     }
 
     /// Run a virtual terminal and send bytes from the given Read to the terminal.

@@ -26,6 +26,7 @@ open = { optional = true, version = "5.4" }
 liquid = { optional = true, version = "0.26" }
 liquid-core = { optional = true, version = "0.26" }
 regex = { optional = true, version = "1.13" }
+which = "8.0.5"
 
 [dev-dependencies]
 # Pinned to 0.7: the 0.8 alphas change the matcher API.

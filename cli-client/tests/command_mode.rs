@@ -49,6 +49,28 @@ fn nonzero_exit_propagates() {
 }
 
 #[test]
+fn command_not_found_fails_cleanly() {
+    // The program is resolved against PATH in the parent process (the PTY
+    // subprocess environment may differ, notably on Windows); an unresolvable
+    // command is a trmnl-console error, not a command exit code.
+    let out = Cmd::new()
+        .size(4, 2)
+        .args(["--", "trmnl-console-no-such-command"])
+        .run();
+    assert_eq!(out.code(), common::EXIT_ERROR, "stderr: {}", out.stderr);
+    assert!(
+        out.stderr.contains("trmnl-console-no-such-command"),
+        "stderr should name the missing command: {}",
+        out.stderr
+    );
+    assert!(
+        out.stdout.is_empty(),
+        "no snapshot for a command that never ran; stdout: {:?}",
+        out.stdout
+    );
+}
+
+#[test]
 fn wait_time_kills_and_snapshots() {
     // CONTRACT: WAIT_TIME_KILL_SNAPSHOTS — the kill at --wait-time expiry
     // must not be treated as the command "exiting with a non-zero exit code"
