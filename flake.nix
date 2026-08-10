@@ -2,6 +2,7 @@
   description = "Console plugin for TRMNL";
 
   inputs = {
+    self.submodules = true;
     nixpkgs.url = "github:NixOS/nixpkgs/nixos-unstable";
   };
 
@@ -32,6 +33,10 @@
       packages = eachPkgs (pkgs: rec {
         trmnl-console = pkgs.callPackage ./cli-client/pkg.nix { };
         default = trmnl-console;
+      });
+
+      checks = eachPkgs (pkgs: {
+        trmnl-console = pkgs.callPackage ./cli-client/pkg.nix { };
       });
 
       formatter = eachPkgs (pkgs: pkgs.nixfmt-tree);

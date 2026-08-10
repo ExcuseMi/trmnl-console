@@ -33,6 +33,9 @@ fn demo_mode_renders_example() {
 
     let mut cmd = CommandBuilder::new(common::BIN);
     cmd.args(["-w", "20", "-h", "5", "--wait-time", "2"]);
+    // Without an explicit cwd, portable-pty chdirs the child to $HOME, which
+    // does not exist in e.g. the nix build sandbox and makes spawn fail.
+    cmd.cwd(std::env::current_dir().expect("current_dir failed"));
     let mut child = pair.slave.spawn_command(cmd).expect("spawn in PTY failed");
     // Close our slave handle so the master sees EOF once the child exits.
     drop(pair.slave);
