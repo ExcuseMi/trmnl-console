@@ -15,6 +15,8 @@ jobs:
           submodules: 'true'
       - uses: dtolnay/rust-toolchain@stable
       - uses: Swatinem/rust-cache@v2
+        with:
+          workspaces: cli-client
       - name: cargo test
         run: cargo test
         working-directory: cli-client

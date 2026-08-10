@@ -15,7 +15,7 @@ jobs:
       - name: nix flake check
         run: nix flake check --print-build-logs
   flake-fmt:
-    name: Nix Flake Checks
+    name: Nix Flake Formatting
     runs-on: ubuntu-22.04
     steps:
       - uses: actions/checkout@v7

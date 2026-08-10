@@ -15,6 +15,8 @@ jobs:
           submodules: 'true'
       - uses: dtolnay/rust-toolchain@stable
       - uses: Swatinem/rust-cache@v2
+        with:
+          workspaces: cli-client
       - name: cargo build
         run: cargo build --release --no-default-features
         working-directory: cli-client
@@ -51,6 +53,8 @@ jobs:
         with:
           target: ${{ matrix.target }}
       - uses: Swatinem/rust-cache@v2
+        with:
+          workspaces: cli-client
       - name: get commit sha & version
         run: |
           echo "COMMIT_SHORT_SHA=$(git rev-parse --short ${{ github.sha }})" >> $GITHUB_ENV
@@ -71,7 +75,7 @@ jobs:
           # todo: re-enable before commit: archive: false
 
   build-default-windows-msvc:
-    name: Default build (windows-msvc)
+    name: Default build
     strategy:
       matrix:
         target:
@@ -87,6 +91,8 @@ jobs:
         with:
           target: ${{ matrix.target }}
       - uses: Swatinem/rust-cache@v2
+        with:
+          workspaces: cli-client
       - name: get commit sha & version
         run: |
           echo "COMMIT_SHORT_SHA=$(git rev-parse --short ${{ github.sha }})" >> $GITHUB_ENV
@@ -105,7 +111,7 @@ jobs:
           archive: false
 
   build-default-darwin:
-    name: Default build (darwin)
+    name: Default build
     runs-on: macos-14
     strategy:
       matrix:
@@ -119,6 +125,8 @@ jobs:
         with:
           target: ${{ matrix.target }}
       - uses: Swatinem/rust-cache@v2
+        with:
+          workspaces: cli-client
       - name: get commit sha & version
         run: |
           echo "COMMIT_SHORT_SHA=$(git rev-parse --short ${{ github.sha }})" >> $GITHUB_ENV
