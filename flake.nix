@@ -2,7 +2,6 @@
   description = "Console plugin for TRMNL";
 
   inputs = {
-    self.submodules = true;
     nixpkgs.url = "github:NixOS/nixpkgs/nixos-unstable";
   };
 
