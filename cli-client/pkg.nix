@@ -28,6 +28,7 @@ rustPlatform.buildRustPackage (finalAttrs: {
   # Since actually using .submodule=true on the Flake isn't supported with `github:`
   # and even without it it's very unreliable, we add the submodule here manually via nix
   postUnpack = ''
+    rm $sourceRoot/trmnl-framework -rf || true
     cp -a ${trmnlFramework} $sourceRoot/trmnl-framework
   '';
 
