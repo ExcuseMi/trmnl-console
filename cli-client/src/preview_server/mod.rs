@@ -70,7 +70,13 @@ pub async fn launch(height: u16, payload: WebhookPayload) -> u8 {
     let trmnl16bold_woff2 = warp::path!("fonts" / "TRMNL16-Bold.woff2")
         .map(|| warp::reply::with_header(TRMNL16_BOLD_WOFF2, CONTENT_TYPE, "font/woff2"));
 
-    let listener = match tokio::net::TcpListener::bind(("127.0.0.1", 0)).await {
+    let port = env::var("TRMNL_CONSOLE_PORT")
+        .ok()
+        .and_then(|port_str| port_str.parse::<_>().ok())
+        // default to 0: auto-assign port
+        .unwrap_or_default();
+
+    let listener = match tokio::net::TcpListener::bind(("127.0.0.1", port)).await {
         Ok(listener) => listener,
         Err(err) => {
             eprintln!("trmnl-console: failed to start preview server: {err}");
