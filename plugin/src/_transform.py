@@ -2,8 +2,8 @@
 NOTE: Previously TRMNL did not actually run this serverless transport,
 since it was not supported for webhooks.
 
-It is now supported and should run, but if for some reason it doesn't,
-the decompression is instead done in JavaScript, see shared.liquid.
+It now does. However, 5kb is the maximum size that the function can return,
+so instead this is done in JavaScript, see shared.liquid.
 """
 
 from dataclasses import dataclass
@@ -227,9 +227,11 @@ def run(input):
                 # remove the untransformed content to make sure the js doesn't try to also decode it.
                 del input["data"]["content"]
             except Exception as e:
-                return {"error": f"failed to decode console output: {e.__class__.__name__}: {e}"}
+                return {"error": f"failed to decode console output: {e.__class__.__name__}: {e}", "data": None}
+        elif "content" in input["data"]:
+            return {"error": "plugin did not receive console width.", "data": None}
         else:
-            return {"error": "plugin did not receive console input and width."}
+            return {"error": "plugin did not receive console content.", "data": None}
     else:
-        return {"error": "plugin did not receive any data yet."}
-    return input
+        return {"error": "plugin did not receive any data yet.", "data": None}
+    return {"data": input["data"], "error": None}

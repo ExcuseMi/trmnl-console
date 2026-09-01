@@ -18,6 +18,20 @@ pub struct WebhookPayload {
 }
 
 impl WebhookPayload {
+    #[allow(unused)]
+    pub fn into_webhook(self) -> serde_json::Value {
+        json!({
+            "merge_variables": {
+                "data": {
+                    "width": self.data.width,
+                    "scale": self.data.scale,
+                    "bar": self.data.bar,
+                    "content": self.data.content
+                }
+            }
+        })
+    }
+    #[allow(unused)]
     pub fn into_webhook_parts(self) -> (serde_json::Value, serde_json::Value) {
         let metadata_payload = json!({
             "merge_variables": {
@@ -26,8 +40,7 @@ impl WebhookPayload {
                     "scale": self.data.scale,
                     "bar": self.data.bar
                 }
-            },
-            "merge_strategy": "deep_merge"
+            }
         });
         let content_payload = json!({
             "merge_variables": {

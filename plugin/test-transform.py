@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 """
-Tests for src/transform.py (sbuffer_to_html and run).
+Tests for src/_transform.py (sbuffer_to_html and run).
 
 Run from the plugin/ directory: python3 test-transform.py
 
@@ -17,7 +17,7 @@ from os import path
 
 sys.path.insert(0, path.join(path.dirname(path.abspath(__file__)), "src"))
 
-from transform import run, sbuffer_to_html
+from _transform import run, sbuffer_to_html
 
 V = "\ue000"
 ESC = "\ue300"
@@ -191,13 +191,18 @@ class SBufferToHtmlTest(unittest.TestCase):
 class RunTest(unittest.TestCase):
     def test_transforms_content_using_width(self):
         result = run({"data": {"content": V + "hi", "width": 4}})
-        self.assertEqual(result, {"data": {"content_transformed": "hi  ", "width": 4}})
+        self.assertEqual(result, {"data": {"content_transformed": "hi  ", "width": 4}, "error": None})
 
     def test_input_without_data_returns_error(self):
-        self.assertEqual(run({"foo": 1}), {"error": "plugin did not receive any data yet."})
+        self.assertEqual(run({"foo": 1}), {"error": "plugin did not receive any data yet.", "data": None})
 
     def test_data_without_content_returns_error(self):
-        self.assertEqual(run({"data": {"x": 1}}), {"error": "plugin did not receive console input and width."})
+        self.assertEqual(run({"data": {"x": 1}}),
+                         {"error": "plugin did not receive console content.", "data": None})
+
+    def test_data_without_width_returns_error(self):
+        self.assertEqual(run({"data": {"content": "foo"}}),
+                         {"error": "plugin did not receive console width.", "data": None})
 
 
 if __name__ == "__main__":

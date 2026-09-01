@@ -1451,15 +1451,15 @@
 {% endif %}
 {% if data.content %}
     <!--
-        If we end up here, then the serverless transform didn't run - let's do clientside decompression.
-        This is only really used for the `trmnl-console` previewer, since it doesn't run the serverless
-        transform but also kept as a backup in case the serverless transform fails.
+        This decompresses the SBuffer-compressed console data.
+        I would ideally do this serverside using a serverless transform, and even already had that implemented,
+        however unfortunately the output it produces is >5kb, which is the max TRMNL core allows.
     -->
     <script type="application/sbuffer" id="{{ id_prefix }}-compressed">{{ data.content | raw }}</script>
     <script type="text/javascript" class="tc--decompress-script">
         /*
          * This converts the custom "SBuffer" (version 1) compressed terminal data
-         * to HTML. See transform.py.
+         * to HTML. See _transform.py.
          */
         function sbuffer_to_html(sbuffer, width) {
             const START = '\uE000';

@@ -96,8 +96,8 @@
 //! # HTML representation
 //! Every SBuffer string has a specific HTML representation, which is the final content
 //! to be rendered by the plugin. This implementation is provided by [`SBuffer::to_html`]
-//! and another implementation exists at the receiving end for the serverless transform
-//! function in the private plugin recipe (/plugin/src/transform.py).
+//! and two implementations exist at the receiving end for the serverless transform
+//! function in the private plugin recipe (/plugin/src/_transform.py and /plugin/src/shared.liquid).
 //!
 //! &, <, and > must be HTML-escaped.
 //!

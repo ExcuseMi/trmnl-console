@@ -126,6 +126,7 @@ pub async fn send(url: String, payload: WebhookPayload) -> Result<(), SendWebhoo
             kind: err,
         });
     }
+
     Ok(())
 }
 
