@@ -22,14 +22,14 @@ static PLUGIN_LIQUID: &str = include_str!("../../../plugin/src/shared.liquid");
 static RENDERER_LIQUID: &str = include_str!("../../preview-assets/template/renderer.liquid");
 static PREVIEWER_LIQUID: &str = include_str!("../../preview-assets/template/previewer.liquid");
 static FRAMEWORK_CSS: &str =
-    include_str!("../../../trmnl-framework/public/css/3.2.0/plugins.min.css");
+    include_str!("../../../trmnl-framework/public/css/3.3.1/plugins.min.css");
 static FRAMEWORK_CSS_THEME_DARK: &str =
-    include_str!("../../../trmnl-framework/public/css/3.2.0/themes/dark-theme.css");
+    include_str!("../../../trmnl-framework/public/css/3.3.1/themes/dark-theme.css");
 static FRAMEWORK_CSS_THEME_BLACK_YELLOW: &str =
-    include_str!("../../../trmnl-framework/public/css/3.2.0/themes/black-and-yellow-theme.css");
+    include_str!("../../../trmnl-framework/public/css/3.3.1/themes/black-and-yellow-theme.css");
 static FRAMEWORK_CSS_THEME_WHITE_RED: &str =
-    include_str!("../../../trmnl-framework/public/css/3.2.0/themes/white-and-red-theme.css");
-static FRAMEWORK_JS: &str = include_str!("../../../trmnl-framework/public/js/3.2.0/plugins.min.js");
+    include_str!("../../../trmnl-framework/public/css/3.3.1/themes/white-and-red-theme.css");
+static FRAMEWORK_JS: &str = include_str!("../../../trmnl-framework/public/js/3.3.1/plugins.min.js");
 static TRMNL16_BOLD_TTF: &[u8] =
     include_bytes!("../../../trmnl-framework/public/fonts/TRMNL16-Bold.ttf");
 static TRMNL16_BOLD_WOFF: &[u8] =

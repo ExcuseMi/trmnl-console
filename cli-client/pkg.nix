@@ -12,8 +12,8 @@ let
   trmnlFramework = fetchFromGitHub {
     owner = "usetrmnl";
     repo = "trmnl-framework";
-    rev = "5dd4de04c13f6f7066bf92d2a751cb994fcd2910"; # v3.2.0
-    hash = "sha256-R2PuY7HA75TupqyTavRfVhen5C6BRokXqBGkFl4ajvI=";
+    tag = "v3.3.1";
+    hash = "sha256-Jn+zbZVDLmwhn8iY065EXsmrRjTe62wK8TpCjDYfrkE=";
   };
 in
 rustPlatform.buildRustPackage (finalAttrs: {
