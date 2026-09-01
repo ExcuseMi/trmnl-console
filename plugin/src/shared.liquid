@@ -1450,7 +1450,11 @@
     </div>
 {% endif %}
 {% if data.content %}
-    <!-- If we end up here, then the serverless transform didn't run - let's do clientside decompression -->
+    <!--
+        If we end up here, then the serverless transform didn't run - let's do clientside decompression.
+        This is only really used for the `trmnl-console` previewer, since it doesn't run the serverless
+        transform but also kept as a backup in case the serverless transform fails.
+    -->
     <script type="application/sbuffer" id="{{ id_prefix }}-compressed">{{ data.content | raw }}</script>
     <script type="text/javascript" class="tc--decompress-script">
         /*

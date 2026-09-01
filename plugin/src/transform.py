@@ -1,8 +1,9 @@
 """
-NOTE: At the time of writing, TRMNL does not actually run this serverless transport,
-since it is not supported for webhooks.
+NOTE: Previously TRMNL did not actually run this serverless transport,
+since it was not supported for webhooks.
 
-If this transform does not run, the decompression is instead done in JavaScript, see shared.liquid.
+It is now supported and should run, but if for some reason it doesn't,
+the decompression is instead done in JavaScript, see shared.liquid.
 """
 
 from dataclasses import dataclass
@@ -223,6 +224,7 @@ def run(input):
                 input["data"]["content_transformed"] = sbuffer_to_html(
                     input["data"]["content"], input["data"]["width"]
                 )
+                # remove the untransformed content to make sure the js doesn't try to also decode it.
                 del input["data"]["content"]
             except Exception as e:
                 return {"error": f"failed to decode console output: {e.__class__.__name__}: {e}"}
