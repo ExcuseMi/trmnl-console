@@ -20,13 +20,13 @@ serde = { version = "1", features = ["derive"] }
 serde_json = "1"
 serde_yaml = "0.9"
 reqwest = { version = "0.13", features = ["json"] }
-owo-colors = { version = "4.3", features = ["supports-colors"] }
+owo-colors = { version = "4.4", features = ["supports-colors"] }
 warp = { optional = true, version = "0.4", features = ["server"] }
 open = { optional = true, version = "5.4" }
 liquid = { optional = true, version = "0.26" }
 liquid-core = { optional = true, version = "0.26" }
 regex = { optional = true, version = "1.13" }
-which = "8.0.5"
+which = "8.0.6"
 
 [dev-dependencies]
 # Pinned to 0.7: the 0.8 alphas change the matcher API.
