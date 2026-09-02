@@ -46,6 +46,11 @@ struct Config {
     /// Default webhook URL for jobs that don't set their own `webhook_url`.
     #[serde(default)]
     webhook_url: Option<String>,
+    /// Default bearer token for jobs that don't set their own `webhook_token`. Only needed
+    /// when `webhook_url` is a self-hosted `trmnl-console-relay`, not TRMNL's own webhook
+    /// endpoint (whose URL already embeds its own secret).
+    #[serde(default)]
+    webhook_token: Option<String>,
     #[serde(default)]
     jobs: Vec<JobConfig>,
 }
@@ -65,6 +70,9 @@ struct JobConfig {
     /// Overrides the top-level `webhook_url` for this job.
     #[serde(default)]
     webhook_url: Option<String>,
+    /// Overrides the top-level `webhook_token` for this job.
+    #[serde(default)]
+    webhook_token: Option<String>,
     /// Also feed the command's stderr into the captured terminal, like the CLI's
     /// `--pass-stderr`.
     #[serde(default)]
@@ -170,7 +178,7 @@ async fn main() -> ExitCode {
 
     let mut jobs = Vec::with_capacity(config.jobs.len());
     for job in config.jobs {
-        let Some(webhook_url) = job
+        let Some(url) = job
             .webhook_url
             .clone()
             .or_else(|| config.webhook_url.clone())
@@ -181,6 +189,10 @@ async fn main() -> ExitCode {
             );
             continue;
         };
+        let token = job
+            .webhook_token
+            .clone()
+            .or_else(|| config.webhook_token.clone());
         if job.sizes.is_empty() {
             eprintln!(
                 "trmnl-console-backend: job '{}' has an empty sizes list, skipping",
@@ -188,7 +200,7 @@ async fn main() -> ExitCode {
             );
             continue;
         }
-        jobs.push((job, webhook_url));
+        jobs.push((job, Destination { url, token }));
     }
     if jobs.is_empty() {
         eprintln!("trmnl-console-backend: no runnable jobs after validation, exiting");
@@ -196,15 +208,15 @@ async fn main() -> ExitCode {
     }
 
     if args.once {
-        for (job, webhook_url) in &jobs {
-            run_job_once(job, webhook_url).await;
+        for (job, destination) in &jobs {
+            run_job_once(job, destination).await;
         }
         return ExitCode::SUCCESS;
     }
 
     let handles: Vec<_> = jobs
         .into_iter()
-        .map(|(job, webhook_url)| tokio::spawn(run_job_loop(job, webhook_url)))
+        .map(|(job, destination)| tokio::spawn(run_job_loop(job, destination)))
         .collect();
 
     tokio::signal::ctrl_c()
@@ -223,17 +235,25 @@ fn load_config(path: &PathBuf) -> Result<Config, String> {
     serde_yaml::from_str(&raw).map_err(|err| err.to_string())
 }
 
-async fn run_job_loop(job: JobConfig, webhook_url: String) {
+/// Where a job's payload goes: TRMNL's own webhook endpoint (`token: None`, the URL's UUID
+/// is the secret) or a self-hosted `trmnl-console-relay` (`token: Some(..)`, sent as
+/// `Authorization: Bearer`).
+struct Destination {
+    url: String,
+    token: Option<String>,
+}
+
+async fn run_job_loop(job: JobConfig, destination: Destination) {
     let mut interval = tokio::time::interval(Duration::from_secs(job.interval_seconds.max(1)));
     interval.set_missed_tick_behavior(MissedTickBehavior::Delay);
     loop {
         interval.tick().await;
-        run_job_once(&job, &webhook_url).await;
+        run_job_once(&job, &destination).await;
     }
 }
 
-async fn run_job_once(job: &JobConfig, webhook_url: &str) {
-    match run_job(job, webhook_url).await {
+async fn run_job_once(job: &JobConfig, destination: &Destination) {
+    match run_job(job, destination).await {
         Ok(()) => println!(
             "trmnl-console-backend: job '{}' sent successfully",
             job.name
@@ -242,7 +262,7 @@ async fn run_job_once(job: &JobConfig, webhook_url: &str) {
     }
 }
 
-async fn run_job(job: &JobConfig, webhook_url: &str) -> Result<(), String> {
+async fn run_job(job: &JobConfig, destination: &Destination) -> Result<(), String> {
     let output = capture_command_output(&job.command)
         .await
         .map_err(|err| format!("command '{}' failed: {err}", job.command))?;
@@ -267,9 +287,13 @@ async fn run_job(job: &JobConfig, webhook_url: &str) -> Result<(), String> {
     let variants = trim_to_budget(&bar, variants, job.max_payload_bytes, &job.name);
     let payload = WebhookPayloadDataMulti { bar, variants }.into_webhook();
 
-    webhook::send_one(webhook_url.to_string(), payload)
-        .await
-        .map_err(|err| webhook::describe_error(&err.kind))
+    webhook::send_one(
+        destination.url.clone(),
+        payload,
+        destination.token.as_deref(),
+    )
+    .await
+    .map_err(|err| webhook::describe_error(&err.kind))
 }
 
 /// Runs `command` through a shell once and returns its raw stdout bytes, to be replayed

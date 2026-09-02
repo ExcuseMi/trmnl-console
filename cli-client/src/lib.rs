@@ -9,6 +9,8 @@ pub mod demo;
 pub mod payload;
 #[cfg(feature = "preview")]
 pub mod preview_server;
+#[cfg(feature = "relay")]
+pub mod relay;
 pub mod sbuffer;
 pub mod terminal_subprocess;
 pub mod virtual_terminal;

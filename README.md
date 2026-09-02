@@ -244,6 +244,13 @@ all in one payload, and the plugin recipe picks whichever one best fits the scre
 actually given at render time. See [`backend/README.md`](backend/README.md) for setup, the
 config reference, and tmux/Zellij examples.
 
+By default the backend pushes to TRMNL's own webhook endpoint, which caps you at 12
+pushes/hour (30 on TRMNL+) and 2kb/request. [`relay/`](relay/) has
+`trmnl-console-relay`: a self-hosted receiver you can point the backend at instead - it
+accepts the exact same payload with no rate/size limit, and a **polling**-strategy plugin
+(`plugin/src/settings.yml`) fetches the current state from it on its own schedule. See
+[`relay/README.md`](relay/README.md).
+
 ## Advanced Usage
 
 You can use `trmnl-console --help` to get more advanced usage information and information about the formats used

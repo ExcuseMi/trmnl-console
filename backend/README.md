@@ -50,18 +50,36 @@ not fit a *live*, redrawing TUI (`htop`, `btop`, ...) that needs to be driven in
 while it runs; for those, keep using the `trmnl-console` CLI directly (see the top-level
 README), on its own cron/systemd timer.
 
+## Pushing to TRMNL directly, or to your own relay
+
+`webhook_url` can be either TRMNL's own webhook endpoint (`https://usetrmnl.com/api/custom_plugins/...`,
+found on the plugin instance's settings page) or a self-hosted [`trmnl-console-relay`](../relay/)
+you point a **polling**-strategy plugin at instead - see [`../relay/README.md`](../relay/README.md)
+for why you'd want that (mainly: no webhook rate/size limit, since the relay itself isn't
+rate-limited and TRMNL pulls from it on its own schedule). Pointed at a relay, also set
+`webhook_token` to the relay's configured secret - TRMNL's own endpoint needs no such token
+(the URL itself is the secret), but a relay authenticates pushes with a bearer token instead:
+
+```yaml
+webhook_url: "https://your-relay-host/trmnl-console"
+webhook_token: "the relay's RELAY_TOKEN"
+```
+
 ## Config reference
 
 ```yaml
 # Default webhook URL for jobs that don't set their own `webhook_url`. At least one of
-# top-level webhook_url or every job's own webhook_url must be set.
+# top-level webhook_url or every job's own webhook_url must be set. Either TRMNL's own
+# webhook endpoint or a trmnl-console-relay - see above.
 webhook_url: "https://usetrmnl.com/api/custom_plugins/YOUR-UUID-HERE"
+webhook_token: null              # optional; only needed when webhook_url is a relay
 
 jobs:
   - name: my-job                  # used only for logging
     command: "tmux capture-pane -t main -p -e"   # run via `sh -c`, stdout is captured
     interval_seconds: 300         # seconds between runs
     webhook_url: "..."            # optional, overrides the top-level default for this job
+    webhook_token: "..."          # optional, overrides the top-level default for this job
     pass_stderr: false            # also feed stderr into the captured terminal
     wait_time_seconds: 2.0        # settle time per size after the captured bytes are fed in
     bar:                          # optional; omit entirely to hide the bottom bar
@@ -86,10 +104,12 @@ keeps the payload small and leaves headroom for real content.
 ## Rate and size limits
 
 TRMNL allows up to 12 webhooks/hour per plugin (30/hour on TRMNL+) and rejects payloads over
-2kb (5kb on TRMNL+) - see <https://docs.trmnl.com/go/private-plugins/webhooks>. Keep
-`interval_seconds` at 300 or higher unless you're on TRMNL+, and watch the logs: a job that's
-dropping size variants or still over budget after dropping down to one logs a warning each
-tick.
+2kb (5kb on TRMNL+) - see <https://docs.trmnl.com/go/private-plugins/webhooks>. These limits
+are specific to TRMNL's own webhook endpoint; pushing to a [`trmnl-console-relay`](../relay/)
+instead isn't subject to either, since the relay just stores whatever it's given and TRMNL
+pulls from it separately. If you're pushing to TRMNL directly, keep `interval_seconds` at 300
+or higher unless you're on TRMNL+, and watch the logs: a job that's dropping size variants or
+still over budget after dropping down to one logs a warning each tick.
 
 Two jobs sharing the same plugin instance (same `webhook_url`) overwrite each other's content
 on every payload - `merge_variables` replaces plugin data wholesale by default. Point each job

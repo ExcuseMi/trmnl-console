@@ -1,12 +1,12 @@
 ---
-strategy: webhook
+strategy: polling
 no_screen_padding: 'no'
 dark_mode: 'no'
 static_data: ''
 polling_verb: get
 framework_version: 3.3.1
 serverless_language:
-polling_url: ''
+polling_url: 'https://trmnl.bettens.dev/trmnl-console'
 polling_headers: ''
 polling_body: ''
 oauth_enabled: 'false'
@@ -36,16 +36,12 @@ custom_fields:
   description: |
     This plugin displays the output of a console command on your TRMNL device.<br>
     <br>
-    To accomplish this, you will need to run a console command on your PC or
-    server. You can find more information, examples and the command at the
+    Push a terminal snapshot (tmux/Zellij pane, or any command) to a self-hosted
+    trmnl-console-relay - this plugin polls it. You can find more information,
+    examples and the command at the
     <a href="https://github.com/theCapypara/trmnl-console" target="_blank">repository</a>.
   category: custom,productivity
   github_url: https://github.com/theCapypara/trmnl-console
-- keyname: webhook_url
-  field_type: copyable_webhook_url
-  name: Webhook URL
-  description: Use this URL with the `trmnl-console` command.
-  help_text: This will populate once the plugin has been created/saved.
 name: Console / Terminal Output
 description: Display the output of a command
 refresh_interval: 15

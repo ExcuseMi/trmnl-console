@@ -12,6 +12,7 @@ path = "src/lib.rs"
 [features]
 default = ["preview"]
 preview = ["dep:warp", "dep:open", "dep:liquid", "dep:liquid-core", "dep:regex"]
+relay = ["dep:warp"]
 
 [dependencies]
 clap = { version = "4.6", features = ["derive", "env"] }
