@@ -1,6 +1,6 @@
 # "Console" plugin for TRMNL
 
-![preview of the plugin](screenshots/demo-trmnl-og-s1-2bit.png)
+![preview of the plugin](screenshots/example-trmnl-og-s1-2bit.png)
 
 **Plugin recipe**: [todo](todo)
 
