@@ -6,7 +6,7 @@ static_data: ''
 polling_verb: get
 framework_version: 3.3.1
 serverless_language:
-polling_url: https://trmnl.bettens.dev/trmnl-console
+polling_url: https://trmnl.bettens.dev/trmnl-console/a5a59cf5-91bb-4603-9e75-c3da98a53e0c
 polling_headers: ''
 polling_body: ''
 id: 465528
@@ -38,7 +38,7 @@ custom_fields:
     This plugin displays the output of a console command on your TRMNL device.<br>
     <br>
     Push a terminal snapshot (tmux/Zellij pane, or any command) to a self-hosted
-    trmnl-console-relay - this plugin polls it. You can find more information,
+    trmnl-console-backend - this plugin polls it. You can find more information,
     examples and the command at the
     <a href="https://github.com/theCapypara/trmnl-console" target="_blank">repository</a>.
   category: custom,productivity

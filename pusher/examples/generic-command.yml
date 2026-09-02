@@ -4,7 +4,7 @@
 # What doesn't fit this model: a *live*, interactively-redrawing TUI (htop, btop, etc.) that
 # needs to be driven inside a real PTY to render correctly and only make sense captured after
 # running for a bit. Use the `trmnl-console` CLI directly for those (see the top-level README's
-# examples), on its own schedule (cron/systemd timer) - trmnl-console-backend's model is a
+# examples), on its own schedule (cron/systemd timer) - trmnl-console-pusher's model is a
 # one-shot command whose stdout is captured once per tick, which fits a static dump (tmux/
 # Zellij pane, `df`, `git log`, ...) rather than a redrawing TUI.
 

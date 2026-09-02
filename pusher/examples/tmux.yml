@@ -1,4 +1,4 @@
-# Minimal tmux example for trmnl-console-backend.
+# Minimal tmux example for trmnl-console-pusher.
 #
 # Captures the pane named "main" in a tmux session also named "main" (`tmux new -s main`) every
 # 5 minutes and pushes it to your plugin. `-e` keeps color/formatting escape codes; drop it for

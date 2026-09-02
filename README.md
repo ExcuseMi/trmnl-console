@@ -233,23 +233,23 @@ the commands; you may need to remove when trying it out yourself.
     </tr>
 </table>
 
-## Backend (no manual webhook pushes)
+## Repeating pushes, and a self-hosted webhook endpoint
 
 Running `trmnl-console` by hand (or wiring up your own cron job around it) every time you want
-something on your device gets old. [`backend/`](backend/) has `trmnl-console-backend`: a small
+something on your device gets old. [`pusher/`](pusher/) has `trmnl-console-pusher`: a small
 Docker-friendly scheduler that periodically captures a command's output - a tmux/Zellij pane, or
 any other one-shot command - and pushes it for you. Unlike the CLI, it doesn't need `-w/-h` set
 to one specific device: a job captures its command's output at every size you list, sends them
 all in one payload, and the plugin recipe picks whichever one best fits the screen space it's
-actually given at render time. See [`backend/README.md`](backend/README.md) for setup, the
+actually given at render time. See [`pusher/README.md`](pusher/README.md) for setup, the
 config reference, and tmux/Zellij examples.
 
-By default the backend pushes to TRMNL's own webhook endpoint, which caps you at 12
-pushes/hour (30 on TRMNL+) and 2kb/request. [`relay/`](relay/) has
-`trmnl-console-relay`: a self-hosted receiver you can point the backend at instead - it
-accepts the exact same payload with no rate/size limit, and a **polling**-strategy plugin
-(`plugin/src/settings.yml`) fetches the current state from it on its own schedule. See
-[`relay/README.md`](relay/README.md).
+By default that pushes to TRMNL's own webhook endpoint, which caps you at 12 pushes/hour (30
+on TRMNL+) and 2kb/request. [`backend/`](backend/) has `trmnl-console-backend`: a self-hosted
+stand-in for that same endpoint - same URL for both directions (`POST` to push, `GET` on the
+*same* URL to read it back, exactly like TRMNL's own webhook works), no rate/size limit, and
+a **polling**-strategy plugin (`plugin/src/settings.yml`) fetches from it on its own schedule.
+See [`backend/README.md`](backend/README.md).
 
 ## Advanced Usage
 

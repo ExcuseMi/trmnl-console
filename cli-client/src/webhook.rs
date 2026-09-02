@@ -108,13 +108,13 @@ pub async fn send(url: String, payload: WebhookPayload) -> Result<(), SendWebhoo
 
     let (metadata_payload, content_payload) = payload.into_webhook_parts();
 
-    if let Err(err) = send_json(&client, &url, metadata_payload, None).await {
+    if let Err(err) = send_json(&client, &url, metadata_payload).await {
         return Err(SendWebhookError {
             was_metadata_sent: false,
             kind: err,
         });
     }
-    if let Err(err) = send_json(&client, &url, content_payload, None).await {
+    if let Err(err) = send_json(&client, &url, content_payload).await {
         return Err(SendWebhookError {
             was_metadata_sent: true,
             kind: err,
@@ -126,22 +126,14 @@ pub async fn send(url: String, payload: WebhookPayload) -> Result<(), SendWebhoo
 
 /// Sends a single already-built webhook JSON body (e.g. from
 /// [`crate::payload::WebhookPayloadDataMulti::into_webhook`]) in one request, without the
-/// CLI's metadata/content split. Used by `trmnl-console-backend`, which sends one payload
+/// CLI's metadata/content split. Used by `trmnl-console-pusher`, which sends one payload
 /// per job tick.
-///
-/// `bearer_token`, if given, is sent as `Authorization: Bearer <token>` - TRMNL's own
-/// webhook endpoint doesn't need this (the URL's UUID is the secret), but a self-hosted
-/// `trmnl-console-relay` does.
-pub async fn send_one(
-    url: String,
-    payload: Value,
-    bearer_token: Option<&str>,
-) -> Result<(), SendWebhookError> {
+pub async fn send_one(url: String, payload: Value) -> Result<(), SendWebhookError> {
     let client = build_client().map_err(|kind| SendWebhookError {
         was_metadata_sent: false,
         kind,
     })?;
-    send_json(&client, &url, payload, bearer_token)
+    send_json(&client, &url, payload)
         .await
         .map_err(|kind| SendWebhookError {
             was_metadata_sent: false,
@@ -160,13 +152,8 @@ async fn send_json(
     client: &Client,
     url: &String,
     payload: Value,
-    bearer_token: Option<&str>,
 ) -> Result<(), SendWebhookErrorKind> {
-    let mut request = client.post(url).json(&payload);
-    if let Some(token) = bearer_token {
-        request = request.bearer_auth(token);
-    }
-    match request.send().await {
+    match client.post(url).json(&payload).send().await {
         Ok(response) => {
             if response.status().is_success() {
                 Ok(())

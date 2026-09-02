@@ -1,19 +1,18 @@
-//! Core logic for `trmnl-console-relay`: an always-on HTTP service that accepts a
-//! TRMNL webhook-shaped payload (`{"merge_variables": ..., "merge_strategy": ...}`, same
-//! wire format `trmnl-console`/`trmnl-console-backend` already send) and serves the merged
-//! result back to a TRMNL "polling" private plugin, instead of every push needing to go
-//! directly to TRMNL's own rate/size-limited webhook endpoint. See `relay/README.md` for
-//! the deployment story and `plugin/src/settings.yml` for wiring a plugin recipe up to a
-//! running relay.
+//! Core logic for `trmnl-console-backend` (see `src/bin/trmnl-console-backend.rs`): a
+//! self-hosted stand-in for TRMNL's own private-plugin webhook endpoint.
 //!
-//! This module holds the transport-independent pieces (merge semantics, persisted state,
-//! the TRMNL IP allowlist); `src/bin/trmnl-console-relay.rs` wires them to HTTP routes.
+//! It mirrors that endpoint's contract exactly (see
+//! <https://docs.trmnl.com/go/private-plugins/webhooks>): one URL per id, `POST` pushes a
+//! `{"merge_variables": {...}, "merge_strategy": ...}` payload (same wire format
+//! `trmnl-console` already sends), `GET` on that *same* URL reads the current merged state
+//! back. Point a "polling" plugin recipe's `polling_url` at the same URL you push to, and
+//! it works exactly like a normal TRMNL webhook plugin would, just without TRMNL's webhook
+//! rate/size limits on the push side. See `backend/README.md`.
 
 use serde_json::Value;
-use std::collections::HashSet;
+use std::collections::HashMap;
 use std::path::PathBuf;
 use std::sync::Arc;
-use std::time::Duration;
 use tokio::sync::RwLock;
 
 /// How an incoming payload's `merge_variables` combines with the currently stored state,
@@ -106,137 +105,81 @@ fn stream_merge(state: &mut Value, incoming: Value, limit: usize) {
     }
 }
 
-/// Holds the current merged state in memory, optionally persisted to a JSON file on disk
-/// so a restart doesn't lose the last-pushed content until the next push arrives.
-#[derive(Clone)]
-pub struct Store {
-    path: Option<PathBuf>,
-    state: Arc<RwLock<Value>>,
+/// Only allow id path segments that are safe to use as a filename (also happens to match
+/// the shape of a real webhook UUID) - rejects anything that could be a path-traversal
+/// attempt (`..`, `/`) or is empty/absurdly long.
+pub fn is_valid_id(id: &str) -> bool {
+    !id.is_empty()
+        && id.len() <= 128
+        && id
+            .chars()
+            .all(|c| c.is_ascii_alphanumeric() || c == '-' || c == '_')
 }
 
-impl Store {
-    /// Loads the store, seeding it from `path` if it exists and parses. Starts empty
-    /// (`{}`) otherwise - not an error, since a fresh relay has nothing pushed yet.
-    pub async fn load(path: Option<PathBuf>) -> Self {
-        let initial = match &path {
-            Some(path) => tokio::fs::read(path)
+/// Holds one merged state per id, persisted as `<dir>/<id>.json` so a restart doesn't lose
+/// the last-pushed content until the next push arrives. Each id behaves like an independent
+/// TRMNL webhook endpoint - unrelated ids never see each other's state.
+#[derive(Clone)]
+pub struct MultiStore {
+    dir: Option<PathBuf>,
+    states: Arc<RwLock<HashMap<String, Value>>>,
+}
+
+impl MultiStore {
+    pub fn new(dir: Option<PathBuf>) -> Self {
+        Self {
+            dir,
+            states: Arc::new(RwLock::new(HashMap::new())),
+        }
+    }
+
+    fn path_for(&self, id: &str) -> Option<PathBuf> {
+        self.dir.as_ref().map(|dir| dir.join(format!("{id}.json")))
+    }
+
+    /// Returns the current state for `id`, loading it from disk on first access if not
+    /// already cached in memory. `{}` if nothing has ever been pushed for this id.
+    pub async fn get(&self, id: &str) -> Value {
+        if let Some(state) = self.states.read().await.get(id) {
+            return state.clone();
+        }
+        let loaded = match self.path_for(id) {
+            Some(path) => tokio::fs::read(&path)
                 .await
                 .ok()
                 .and_then(|bytes| serde_json::from_slice(&bytes).ok())
                 .unwrap_or_else(|| Value::Object(Default::default())),
             None => Value::Object(Default::default()),
         };
-        Self {
-            path,
-            state: Arc::new(RwLock::new(initial)),
-        }
+        self.states
+            .write()
+            .await
+            .insert(id.to_string(), loaded.clone());
+        loaded
     }
 
-    pub async fn get(&self) -> Value {
-        self.state.read().await.clone()
-    }
+    /// Merges `incoming` into `id`'s stored state per `strategy` and persists the result
+    /// (if a directory was configured).
+    pub async fn merge(
+        &self,
+        id: &str,
+        incoming: Value,
+        strategy: MergeStrategy,
+    ) -> std::io::Result<()> {
+        let mut current = self.get(id).await;
+        apply_merge(&mut current, incoming, strategy);
 
-    /// Merges `incoming` into the stored state per `strategy` and persists the result (if
-    /// a path was configured).
-    pub async fn merge(&self, incoming: Value, strategy: MergeStrategy) -> std::io::Result<()> {
-        let mut state = self.state.write().await;
-        apply_merge(&mut state, incoming, strategy);
-        if let Some(path) = &self.path {
-            let bytes = serde_json::to_vec_pretty(&*state)?;
+        if let Some(path) = self.path_for(id) {
+            let bytes = serde_json::to_vec_pretty(&current)?;
             if let Some(parent) = path.parent() {
                 tokio::fs::create_dir_all(parent).await?;
             }
             tokio::fs::write(path, bytes).await?;
         }
+
+        self.states.write().await.insert(id.to_string(), current);
         Ok(())
     }
-}
-
-const TRMNL_IPS_API: &str = "https://trmnl.com/api/ips";
-
-#[derive(serde::Deserialize)]
-struct IpsResponse {
-    data: IpsData,
-}
-
-#[derive(serde::Deserialize, Default)]
-struct IpsData {
-    #[serde(default)]
-    ipv4: Vec<String>,
-    #[serde(default)]
-    ipv6: Vec<String>,
-}
-
-/// Restricts the polling endpoint to TRMNL's published server IPs, refreshed
-/// periodically - the pattern documented for protecting polling endpoints (TRMNL sends no
-/// auth of its own on polling requests). Always includes localhost, for local testing.
-#[derive(Clone)]
-pub struct IpAllowlist {
-    ips: Arc<RwLock<HashSet<String>>>,
-}
-
-impl IpAllowlist {
-    fn localhost() -> HashSet<String> {
-        ["127.0.0.1".to_string(), "::1".to_string()]
-            .into_iter()
-            .collect()
-    }
-
-    async fn fetch() -> Option<HashSet<String>> {
-        let client = reqwest::Client::builder()
-            .timeout(Duration::from_secs(10))
-            .build()
-            .ok()?;
-        let resp = client.get(TRMNL_IPS_API).send().await.ok()?;
-        let parsed: IpsResponse = resp.json().await.ok()?;
-        let mut set = Self::localhost();
-        set.extend(parsed.data.ipv4);
-        set.extend(parsed.data.ipv6);
-        Some(set)
-    }
-
-    /// Does an initial fetch (falling back to localhost-only if it fails) and spawns a
-    /// background refresh loop. A failed refresh never clobbers a working allowlist with
-    /// an empty one - it just keeps the last known-good set until the next attempt.
-    pub async fn start(refresh_hours: u64) -> Self {
-        let initial = Self::fetch().await.unwrap_or_else(Self::localhost);
-        let slf = Self {
-            ips: Arc::new(RwLock::new(initial)),
-        };
-        let ips = slf.ips.clone();
-        tokio::spawn(async move {
-            loop {
-                tokio::time::sleep(Duration::from_secs(refresh_hours.max(1) * 3600)).await;
-                if let Some(fresh) = Self::fetch().await {
-                    *ips.write().await = fresh;
-                }
-            }
-        });
-        slf
-    }
-
-    pub async fn contains(&self, ip: &str) -> bool {
-        self.ips.read().await.contains(ip)
-    }
-}
-
-/// Picks the real client IP out of proxy headers (Cloudflare/X-Forwarded-For/X-Real-IP, in
-/// that priority order - same as the documented `ip_whitelist.py` pattern), falling back to
-/// the direct TCP peer address. `header` should return the first value of the given header
-/// name, lowercased, if present.
-pub fn client_ip(
-    mut header: impl FnMut(&str) -> Option<String>,
-    peer: Option<std::net::IpAddr>,
-) -> Option<String> {
-    for name in ["cf-connecting-ip", "x-forwarded-for", "x-real-ip"] {
-        if let Some(value) = header(name) {
-            let ip = value.split(',').next().unwrap_or("").trim();
-            if !ip.is_empty() {
-                return Some(ip.to_string());
-            }
-        }
-    }
-    peer.map(|ip| ip.to_string())
 }
 
 #[cfg(test)]
@@ -323,56 +266,59 @@ mod tests {
         assert!(MergeStrategy::from_request(Some("bogus"), None).is_err());
     }
 
-    #[tokio::test]
-    async fn store_round_trips_through_disk() {
-        let dir = tempfile::tempdir().unwrap();
-        let path = dir.path().join("state.json");
+    #[test]
+    fn id_validation_rejects_traversal_and_empty() {
+        assert!(is_valid_id("a1b2c3d4-e5f6-4a5b-8c9d-0123456789ab"));
+        assert!(is_valid_id("simple_id-123"));
+        assert!(!is_valid_id(""));
+        assert!(!is_valid_id("../etc/passwd"));
+        assert!(!is_valid_id("has/slash"));
+        assert!(!is_valid_id(&"x".repeat(129)));
+    }
 
-        let store = Store::load(Some(path.clone())).await;
+    #[tokio::test]
+    async fn different_ids_are_independent() {
+        let dir = tempfile::tempdir().unwrap();
+        let store = MultiStore::new(Some(dir.path().to_path_buf()));
+
         store
-            .merge(json!({"data": {"bar": null}}), MergeStrategy::Replace)
+            .merge("a", json!({"data": {"bar": "a"}}), MergeStrategy::Replace)
             .await
             .unwrap();
-        assert_eq!(store.get().await, json!({"data": {"bar": null}}));
+        store
+            .merge("b", json!({"data": {"bar": "b"}}), MergeStrategy::Replace)
+            .await
+            .unwrap();
 
-        let reloaded = Store::load(Some(path)).await;
-        assert_eq!(reloaded.get().await, json!({"data": {"bar": null}}));
+        assert_eq!(store.get("a").await, json!({"data": {"bar": "a"}}));
+        assert_eq!(store.get("b").await, json!({"data": {"bar": "b"}}));
     }
 
     #[tokio::test]
-    async fn store_starts_empty_without_a_prior_file() {
+    async fn state_round_trips_through_disk() {
         let dir = tempfile::tempdir().unwrap();
-        let path = dir.path().join("does-not-exist.json");
-        let store = Store::load(Some(path)).await;
-        assert_eq!(store.get().await, json!({}));
-    }
+        let path = dir.path().to_path_buf();
 
-    #[test]
-    fn client_ip_prefers_cloudflare_header() {
-        let ip = client_ip(
-            |name| match name {
-                "cf-connecting-ip" => Some("1.1.1.1".to_string()),
-                "x-forwarded-for" => Some("2.2.2.2".to_string()),
-                _ => None,
-            },
-            Some("3.3.3.3".parse().unwrap()),
-        );
-        assert_eq!(ip.as_deref(), Some("1.1.1.1"));
-    }
-
-    #[test]
-    fn client_ip_falls_back_through_headers_then_peer() {
-        assert_eq!(
-            client_ip(|_| None, Some("9.9.9.9".parse().unwrap())).as_deref(),
-            Some("9.9.9.9")
-        );
-        assert_eq!(
-            client_ip(
-                |name| (name == "x-forwarded-for").then(|| "8.8.8.8, 1.2.3.4".to_string()),
-                None
+        let store = MultiStore::new(Some(path.clone()));
+        store
+            .merge(
+                "my-id",
+                json!({"data": {"bar": null}}),
+                MergeStrategy::Replace,
             )
-            .as_deref(),
-            Some("8.8.8.8")
-        );
+            .await
+            .unwrap();
+
+        // Fresh store (simulating a restart), same directory - must load from disk, not
+        // from the previous instance's in-memory cache.
+        let reloaded = MultiStore::new(Some(path));
+        assert_eq!(reloaded.get("my-id").await, json!({"data": {"bar": null}}));
+    }
+
+    #[tokio::test]
+    async fn unknown_id_starts_empty() {
+        let dir = tempfile::tempdir().unwrap();
+        let store = MultiStore::new(Some(dir.path().to_path_buf()));
+        assert_eq!(store.get("never-pushed").await, json!({}));
     }
 }

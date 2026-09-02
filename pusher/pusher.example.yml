@@ -1,16 +1,12 @@
-# Reference config for trmnl-console-backend. Copy this to backend.yml (gitignored - it will
-# contain your webhook URL) and edit it, or point --config / TRMNL_CONSOLE_BACKEND_CONFIG at a
-# copy anywhere else. See backend/README.md and backend/examples/ for focused tmux/Zellij setups.
+# Reference config for trmnl-console-pusher. Copy this to pusher.yml (gitignored - it will
+# contain your webhook URL) and edit it, or point --config / TRMNL_CONSOLE_PUSHER_CONFIG at a
+# copy anywhere else. See pusher/README.md and pusher/examples/ for focused tmux/Zellij setups.
 
 # Default webhook URL for jobs that don't set their own `webhook_url`. Either TRMNL's own
 # webhook endpoint (find it on the plugin instance's settings page - the "Webhook URL"
-# field) or a self-hosted trmnl-console-relay (see ../relay/README.md for why you'd want
-# that: mainly, no webhook rate/size limit).
-webhook_url: "https://usetrmnl.com/api/custom_plugins/YOUR-UUID-HERE"
-# Only needed when webhook_url above is a trmnl-console-relay, not TRMNL's own endpoint
-# (whose URL already embeds its own secret): the relay's RELAY_TOKEN, sent as
-# `Authorization: Bearer <token>`.
-# webhook_token: "your-relay-token"
+# field) or a self-hosted trmnl-console-backend (see ../backend/README.md for why you'd
+# want that: mainly, no webhook rate/size limit) - same URL either way, no extra config.
+webhook_url: "https://trmnl.com/api/custom_plugins/YOUR-UUID-HERE"
 
 jobs:
   # Every job captures `command`'s stdout once per tick and sends it as one webhook payload

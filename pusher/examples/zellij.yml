@@ -1,4 +1,4 @@
-# Zellij example for trmnl-console-backend.
+# Zellij example for trmnl-console-pusher.
 #
 # IMPORTANT, verified against zellij 0.42: `zellij action dump-screen` (and every other
 # `zellij action` subcommand) only works while a client is actively attached to the target

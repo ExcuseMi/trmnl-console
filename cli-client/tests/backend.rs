@@ -1,138 +1,208 @@
-//! `trmnl-console-backend --once` against a mocked TRMNL API (httpmock).
+//! `trmnl-console-backend` integration tests: spawns the real binary and hits it over HTTP.
 //!
-//! Pins the multi-variant payload shape documented in `src/payload.rs`
-//! (`WebhookPayloadDataMulti::into_webhook`): a single POST per job containing
-//! `merge_variables.data.{bar,variants}`, where each variant carries its own
-//! id/width/scale/content.
+//! The binary only exists when built with `--features backend` (`cargo test --features
+//! backend`) - see `Cargo.toml`.
 
-mod common;
+use std::net::TcpListener;
+use std::process::{Child, Command, Stdio};
+use std::time::{Duration, Instant};
 
-use common::PLAIN;
-use httpmock::prelude::*;
-use std::io::Write;
-use std::process::Command;
-use std::time::Duration;
-use wait_timeout::ChildExt;
-
-const BACKEND_BIN: &str = env!("CARGO_BIN_EXE_trmnl-console-backend");
-const HOOK_PATH: &str = "/api/custom_plugins/TEST-UUID";
-
-fn write_config(contents: &str) -> tempfile::NamedTempFile {
-    let mut file = tempfile::NamedTempFile::new().expect("failed to create temp config file");
-    file.write_all(contents.as_bytes())
-        .expect("failed to write temp config file");
-    file
+struct Backend {
+    child: Child,
+    base_url: String,
 }
 
-fn run_once(config_path: &std::path::Path) -> common::Out {
-    let mut child = Command::new(BACKEND_BIN)
-        .args(["--config", config_path.to_str().unwrap(), "--once"])
-        .stdin(std::process::Stdio::null())
-        .stdout(std::process::Stdio::piped())
-        .stderr(std::process::Stdio::piped())
-        .spawn()
-        .expect("failed to spawn trmnl-console-backend");
-
-    let status = child
-        .wait_timeout(Duration::from_secs(30))
-        .expect("waiting for child failed")
-        .unwrap_or_else(|| {
-            let _ = child.kill();
-            child.wait().expect("waiting for killed child failed");
-            panic!("trmnl-console-backend did not exit within 30s");
-        });
-
-    use std::io::Read;
-    let mut stdout = String::new();
-    let mut stderr = String::new();
-    child
-        .stdout
-        .take()
-        .unwrap()
-        .read_to_string(&mut stdout)
-        .unwrap();
-    child
-        .stderr
-        .take()
-        .unwrap()
-        .read_to_string(&mut stderr)
-        .unwrap();
-
-    common::Out {
-        status,
-        stdout,
-        stderr,
+impl Drop for Backend {
+    fn drop(&mut self) {
+        let _ = self.child.kill();
+        let _ = self.child.wait();
     }
 }
 
+fn free_port() -> u16 {
+    TcpListener::bind("127.0.0.1:0")
+        .unwrap()
+        .local_addr()
+        .unwrap()
+        .port()
+}
+
+fn start_backend(state_dir: &std::path::Path) -> Backend {
+    let Ok(bin) = std::env::var("CARGO_BIN_EXE_trmnl-console-backend") else {
+        panic!(
+            "CARGO_BIN_EXE_trmnl-console-backend not set - build with `cargo test --features backend`"
+        );
+    };
+    let port = free_port();
+    let child = Command::new(bin)
+        .env("BACKEND_BIND", format!("127.0.0.1:{port}"))
+        .env("BACKEND_STATE_DIR", state_dir)
+        .stdout(Stdio::piped())
+        .stderr(Stdio::piped())
+        .spawn()
+        .expect("failed to spawn trmnl-console-backend");
+    let base_url = format!("http://127.0.0.1:{port}");
+
+    // Wait for it to actually be listening instead of a fixed sleep.
+    let deadline = Instant::now() + Duration::from_secs(10);
+    loop {
+        if ureq::get(format!("{base_url}/health")).call().is_ok() {
+            break;
+        }
+        if Instant::now() > deadline {
+            panic!("trmnl-console-backend did not start listening within 10s");
+        }
+        std::thread::sleep(Duration::from_millis(50));
+    }
+
+    Backend { child, base_url }
+}
+
+/// ureq errors (including non-2xx responses - `Error::StatusCode`) on anything but success,
+/// so both match arms here are "the server actually answered", just via different paths.
+macro_rules! status_and_body {
+    ($result:expr) => {
+        match $result {
+            Ok(mut resp) => {
+                let status = resp.status().as_u16();
+                let body = resp.body_mut().read_to_string().unwrap_or_default();
+                (status, body)
+            }
+            Err(ureq::Error::StatusCode(code)) => (code, String::new()),
+            Err(err) => panic!("request failed: {err}"),
+        }
+    };
+}
+
+impl Backend {
+    fn get(&self, path: &str) -> (u16, String) {
+        status_and_body!(ureq::get(format!("{}{}", self.base_url, path)).call())
+    }
+
+    fn post(&self, path: &str, body: &str) -> (u16, String) {
+        let req = ureq::post(format!("{}{}", self.base_url, path))
+            .header("Content-Type", "application/json");
+        status_and_body!(req.send(body))
+    }
+}
+
+const AN_ID: &str = "a1b2c3d4-e5f6-4a5b-8c9d-0123456789ab";
+
 #[test]
-fn once_sends_single_variant_payload() {
-    let server = MockServer::start();
-    let mock = server.mock(|when, then| {
-        when.method(POST)
-            .path(HOOK_PATH)
-            .json_body(serde_json::json!({
-                "merge_variables": {
-                    "data": {
-                        "bar": serde_json::Value::Null,
-                        "variants": [
-                            {
-                                "id": "test-size",
-                                "width": PLAIN.cols,
-                                "scale": 1,
-                                "content": PLAIN.sbuffer,
-                            }
-                        ]
-                    }
-                }
-            }));
-        then.status(200);
-    });
-
-    let config = write_config(&format!(
-        r#"
-webhook_url: "{url}"
-jobs:
-  - name: test-job
-    command: "printf hi"
-    interval_seconds: 60
-    sizes:
-      - {{ id: test-size, width: {width}, height: {height}, scale: 1 }}
-"#,
-        url = server.url(HOOK_PATH),
-        width = PLAIN.cols,
-        height = PLAIN.rows,
-    ));
-
-    let out = run_once(config.path());
-    assert_eq!(
-        out.code(),
-        0,
-        "stdout: {:?}, stderr: {}",
-        out.stdout,
-        out.stderr
-    );
-    mock.assert();
+fn health_needs_no_id() {
+    let dir = tempfile::tempdir().unwrap();
+    let backend = start_backend(dir.path());
+    let (status, body) = backend.get("/health");
+    assert_eq!(status, 200);
+    assert_eq!(body, "ok");
 }
 
 #[test]
-fn once_reports_nonzero_when_no_runnable_jobs() {
-    let config = write_config(
-        r#"
-jobs:
-  - name: no-webhook
-    command: "printf hi"
-    interval_seconds: 60
-    sizes:
-      - { id: x, width: 4, height: 2 }
-"#,
+fn poll_before_any_push_is_an_empty_object() {
+    let dir = tempfile::tempdir().unwrap();
+    let backend = start_backend(dir.path());
+    let (status, body) = backend.get(&format!("/{AN_ID}"));
+    assert_eq!(status, 200);
+    assert_eq!(body, "{}");
+}
+
+#[test]
+fn pushed_payload_is_served_unwrapped_on_the_same_url() {
+    let dir = tempfile::tempdir().unwrap();
+    let backend = start_backend(dir.path());
+
+    let (status, _) = backend.post(
+        &format!("/{AN_ID}"),
+        r#"{"merge_variables":{"data":{"bar":{"left":"hi"},"variants":[{"id":"a","width":4,"scale":1,"content":"x"}]}}}"#,
+    );
+    assert_eq!(status, 200);
+
+    let (status, body) = backend.get(&format!("/{AN_ID}"));
+    assert_eq!(status, 200);
+    let parsed: serde_json::Value = serde_json::from_str(&body).unwrap();
+    assert_eq!(
+        parsed,
+        serde_json::json!({
+            "data": {
+                "bar": {"left": "hi"},
+                "variants": [{"id": "a", "width": 4, "scale": 1, "content": "x"}]
+            }
+        })
+    );
+}
+
+#[test]
+fn different_ids_do_not_see_each_others_state() {
+    let dir = tempfile::tempdir().unwrap();
+    let backend = start_backend(dir.path());
+
+    backend.post("/id-one", r#"{"merge_variables":{"data":{"bar":"one"}}}"#);
+    backend.post("/id-two", r#"{"merge_variables":{"data":{"bar":"two"}}}"#);
+
+    let (_, body_one) = backend.get("/id-one");
+    let (_, body_two) = backend.get("/id-two");
+    assert_eq!(body_one, r#"{"data":{"bar":"one"}}"#);
+    assert_eq!(body_two, r#"{"data":{"bar":"two"}}"#);
+}
+
+#[test]
+fn deep_merge_preserves_untouched_keys() {
+    let dir = tempfile::tempdir().unwrap();
+    let backend = start_backend(dir.path());
+
+    backend.post(
+        &format!("/{AN_ID}"),
+        r#"{"merge_variables":{"data":{"bar":{"left":"hi","right":"there"}}}}"#,
+    );
+    backend.post(
+        &format!("/{AN_ID}"),
+        r#"{"merge_variables":{"data":{"bar":{"left":"updated"}}},"merge_strategy":"deep_merge"}"#,
     );
 
-    let out = run_once(config.path());
-    assert_ne!(out.code(), 0, "stderr: {}", out.stderr);
-    assert!(
-        out.stderr.contains("no webhook_url"),
-        "expected a webhook_url complaint, got stderr: {}",
-        out.stderr
+    let (_, body) = backend.get(&format!("/{AN_ID}"));
+    let parsed: serde_json::Value = serde_json::from_str(&body).unwrap();
+    assert_eq!(
+        parsed,
+        serde_json::json!({"data": {"bar": {"left": "updated", "right": "there"}}})
     );
+}
+
+#[test]
+fn state_survives_a_restart() {
+    let dir = tempfile::tempdir().unwrap();
+
+    {
+        let backend = start_backend(dir.path());
+        backend.post(
+            &format!("/{AN_ID}"),
+            r#"{"merge_variables":{"data":{"bar":null}}}"#,
+        );
+        // give the write a moment to hit disk before we kill the process
+        std::thread::sleep(Duration::from_millis(100));
+    }
+
+    let backend = start_backend(dir.path());
+    let (status, body) = backend.get(&format!("/{AN_ID}"));
+    assert_eq!(status, 200);
+    assert_eq!(body, r#"{"data":{"bar":null}}"#);
+}
+
+#[test]
+fn path_traversal_ids_are_rejected() {
+    let dir = tempfile::tempdir().unwrap();
+    let backend = start_backend(dir.path());
+
+    let (status, _) = backend.get("/../../etc/passwd");
+    assert_ne!(status, 200);
+
+    let (status, _) = backend.post("/../evil", r#"{"merge_variables":{}}"#);
+    assert_ne!(status, 200);
+}
+
+#[test]
+fn malformed_push_body_is_rejected() {
+    let dir = tempfile::tempdir().unwrap();
+    let backend = start_backend(dir.path());
+    let (status, _) = backend.post(&format!("/{AN_ID}"), r#"{"not_merge_variables":{}}"#);
+    assert_eq!(status, 400);
 }

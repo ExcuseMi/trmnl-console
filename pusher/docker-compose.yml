@@ -1,0 +1,27 @@
+# Example compose file for trmnl-console-pusher.
+#
+# Usage (from the repository root):
+#   docker compose -f pusher/docker-compose.yml up --build
+#
+# The pusher needs to reach whatever tmux/Zellij *server* your sessions actually live on.
+# If that's sessions on the same host you're running Docker on (the common case), mount that
+# server's socket directory into the container - see the commented volumes below. If your
+# sessions live elsewhere (another server, inside a different container), point `command:` in
+# pusher.yml at something that reaches them instead (e.g. `ssh other-host tmux capture-pane ...`)
+# and mount SSH credentials in similarly.
+
+services:
+  trmnl-console-pusher:
+    build:
+      context: ..
+      dockerfile: pusher/Dockerfile
+    restart: unless-stopped
+    volumes:
+      - ./pusher.yml:/etc/trmnl-console/pusher.yml:ro
+      # Uncomment to reach tmux sessions running on the Docker host (adjust the UID in the
+      # path - `id -u` on the host - and make sure the container runs as a matching user so
+      # it's allowed to open the socket):
+      # - /tmp/tmux-1000:/tmp/tmux-1000
+      # Same idea for Zellij (path depends on $XDG_RUNTIME_DIR on the host, commonly this):
+      # - /run/user/1000/zellij:/run/user/1000/zellij
+    # user: "1000:1000"  # match the host UID that owns the sockets above

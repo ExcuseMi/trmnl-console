@@ -1,15 +1,18 @@
-//! Shared library code for the `trmnl-console` CLI and `trmnl-console-backend` scheduler.
-//!
-//! Both binaries capture terminal output into an [`sbuffer::SBuffer`] via
-//! [`virtual_terminal::VirtualTerminal`] and send it to a TRMNL private plugin webhook
-//! (see [`payload`] and [`webhook`]) using the payload format documented at
-//! <https://docs.trmnl.com/go/private-plugins/webhooks>.
+//! Shared library code for this crate's binaries:
+//! - `trmnl-console` (the CLI) and `trmnl-console-pusher` (a repeating-task scheduler)
+//!   capture terminal output into an [`sbuffer::SBuffer`] via
+//!   [`virtual_terminal::VirtualTerminal`] and send it to a TRMNL webhook-style endpoint
+//!   (see [`payload`] and [`webhook`]) using the payload format documented at
+//!   <https://docs.trmnl.com/go/private-plugins/webhooks>.
+//! - `trmnl-console-backend` is a self-hosted stand-in for TRMNL's own webhook endpoint
+//!   (see [`relay`]), for when you don't want pushes bound by TRMNL's webhook rate/size
+//!   limits.
 
 pub mod demo;
 pub mod payload;
 #[cfg(feature = "preview")]
 pub mod preview_server;
-#[cfg(feature = "relay")]
+#[cfg(feature = "backend")]
 pub mod relay;
 pub mod sbuffer;
 pub mod terminal_subprocess;
