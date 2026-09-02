@@ -5,7 +5,7 @@ dark_mode: 'no'
 static_data: ''
 polling_verb: get
 framework_version: 3.3.1
-serverless_language: python
+serverless_language:
 polling_url: ''
 polling_headers: ''
 polling_body: ''
@@ -31,12 +31,20 @@ oauth_expiry_field_name: ''
 oauth_expiry_strategy: ''
 oauth_fixed_expiry_ms: ''
 custom_fields:
-  - keyname: info
-    field_type: author_bio
-    name: About This Plugin
-    description: TODO Description
-    category: custom,productivity
-    github_url: https://github.com/theCapypara/trmnl-console
-name: Console
-description: TODO Description
-refresh_interval:
+- keyname: info
+  field_type: author_bio
+  name: About This Plugin
+  description: |
+    This plugin displays the output of a console command on your TRMNL device.<br>
+    <br>
+    To accomplish this, you will need to run a console command on your PC or
+    server. You can find more information, examples and the command at the
+    <a href="https://github.com/theCapypara/trmnl-console" target="_blank">repository</a>.<br>
+    <br>
+    Make sure to "Fork" this plugin and copy the webhook URL. You can then use
+    that URL to send output to your device.
+  category: custom,productivity
+  github_url: https://github.com/theCapypara/trmnl-console
+name: Console / Terminal Output
+description: Display the output of a command
+refresh_interval: 15

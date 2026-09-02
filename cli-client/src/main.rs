@@ -104,6 +104,8 @@ use tokio::time::timeout;
 /// The popular `btop` command for example will not render correctly unless launched
 /// with `btop --tty`.
 ///
+/// trmnl-console does not support True color RGB ANSI codes, these are ignored.
+///
 /// # Exit Codes
 ///
 /// - 0: The command was successful.
