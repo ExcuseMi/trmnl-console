@@ -39,10 +39,7 @@ custom_fields:
     <br>
     To accomplish this, you will need to run a console command on your PC or
     server. You can find more information, examples and the command at the
-    <a href="https://github.com/theCapypara/trmnl-console" target="_blank">repository</a>.<br>
-    <br>
-    Make sure to "Fork" this plugin and copy the webhook URL. You can then use
-    that URL to send output to your device.
+    <a href="https://github.com/theCapypara/trmnl-console" target="_blank">repository</a>.
   category: custom,productivity
   github_url: https://github.com/theCapypara/trmnl-console
 - keyname: webhook_url
