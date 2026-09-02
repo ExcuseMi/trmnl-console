@@ -95,6 +95,15 @@ use tokio::time::timeout;
 ///              specification.
 /// ```
 ///
+/// # Troubleshooting
+/// If the command you are launching does not render correctly or you are getting an error like
+/// "Interactive mode requires a connected terminal", try the `--pass-stderr` option, which will
+/// also connect stderr to the virtual terminal.
+///
+/// If the command you are trying to launch has an option to force a "tty" mode, try adding it.
+/// The popular `btop` command for example will not render correctly unless launched
+/// with `btop --tty`.
+///
 /// # Exit Codes
 ///
 /// - 0: The command was successful.
@@ -153,6 +162,10 @@ pub struct Args {
     /// Providing any --bar-* option enables the title bar on the device.
     #[arg(long, value_name = "IMAGE_URL")]
     bar_icon: Option<String>,
+    /// Also connect stderr to the virtual terminal. If this is enabled, output from stderr
+    /// is no longer forwarded to the stderr of trmnl-console itself.
+    #[arg(long)]
+    pass_stderr: bool,
     /// The command to execute. If not set, character data to be displayed is read from stdin
     /// instead. If the command contains flags that should not be parsed by trmnl-console,
     /// separate the options of trmnl-console and the program by a double dash "--". Example:
@@ -230,16 +243,24 @@ pub async fn main() -> ExitCode {
 
     let term = match args.input_mode(&std::io::stdin()) {
         InputMode::Command => {
-            VirtualTerminal::run_with_cmd(args.width, args.height, &args.command).await
+            VirtualTerminal::run_with_cmd(args.width, args.height, args.pass_stderr, &args.command)
+                .await
         }
         InputMode::Stdin => {
             let stdin = tokio::io::stdin();
-            VirtualTerminal::run_with_async_reader(args.width, args.height, Box::pin(stdin)).await
+            VirtualTerminal::run_with_async_reader(
+                args.width,
+                args.height,
+                args.pass_stderr,
+                Box::pin(stdin),
+            )
+            .await
         }
         InputMode::Demo => {
             VirtualTerminal::run_with_async_reader(
                 args.width,
                 args.height,
+                args.pass_stderr,
                 Box::pin(std::io::Cursor::new(demo::render_terminal_output(
                     args.width as _,
                     args.height as _,

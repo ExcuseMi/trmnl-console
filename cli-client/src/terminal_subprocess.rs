@@ -22,6 +22,8 @@ pub struct SubprocArgs {
     /// File path socket.
     #[arg(long, group = "socket")]
     socket_path: Option<PathBuf>,
+    #[arg(long)]
+    pass_stderr: bool,
     command: Vec<String>,
 }
 
@@ -57,18 +59,24 @@ pub(crate) async fn drive_terminal(args: SubprocArgs) -> ExitCode {
             let mut cmd = tokio::process::Command::new(&args.command[0]);
             cmd.args(&args.command[1..]);
             cmd.stdin(std::process::Stdio::inherit());
-            cmd.stderr(std::process::Stdio::piped());
             cmd.stdout(std::process::Stdio::inherit());
-            let mut child = cmd.spawn().unwrap();
-            let mut child_stderr = child.stderr.take().unwrap();
-            let (_, exit_status) = tokio::join!(
-                tokio::spawn(async move {
-                    tokio::io::copy(&mut child_stderr, &mut stream)
-                        .await
-                        .unwrap();
-                }),
-                child.wait()
-            );
+            let exit_status = if args.pass_stderr {
+                cmd.stderr(std::process::Stdio::inherit());
+                cmd.spawn().unwrap().wait().await
+            } else {
+                cmd.stderr(std::process::Stdio::piped());
+                let mut child = cmd.spawn().unwrap();
+                let mut child_stderr = child.stderr.take().unwrap();
+                let (_, exit_status) = tokio::join!(
+                    tokio::spawn(async move {
+                        tokio::io::copy(&mut child_stderr, &mut stream)
+                            .await
+                            .unwrap();
+                    }),
+                    child.wait()
+                );
+                exit_status
+            };
             // if the process finished disconnect
             get_exit_code(exit_status.unwrap())
         };

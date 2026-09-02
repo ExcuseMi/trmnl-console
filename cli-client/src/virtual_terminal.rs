@@ -89,6 +89,7 @@ impl VirtualTerminal {
     pub async fn run_with_cmd(
         width: u16,
         height: u16,
+        pass_stderr: bool,
         command: impl IntoIterator<Item = impl AsRef<str>>,
     ) -> std::io::Result<Self> {
         let mut command: Vec<OsString> = command.into_iter().map(|x| x.as_ref().into()).collect();
@@ -103,20 +104,22 @@ impl VirtualTerminal {
                 })?
                 .into();
         }
-        Self::run_with_cmd_internal(width, height, TerminalOpMode::Cmd(command)).await
+        Self::run_with_cmd_internal(width, height, pass_stderr, TerminalOpMode::Cmd(command)).await
     }
 
     /// Run a virtual terminal and send bytes from the given Read to the terminal.
     pub async fn run_with_async_reader(
         width: u16,
         height: u16,
+        pass_stderr: bool,
         read: Pin<Box<dyn tokio::io::AsyncRead + Send>>,
     ) -> std::io::Result<Self> {
-        Self::run_with_cmd_internal(width, height, TerminalOpMode::Read(read)).await
+        Self::run_with_cmd_internal(width, height, pass_stderr, TerminalOpMode::Read(read)).await
     }
     async fn run_with_cmd_internal(
         width: u16,
         height: u16,
+        pass_stderr: bool,
         op: TerminalOpMode,
     ) -> std::io::Result<Self> {
         let exit_code: Arc<Mutex<Option<u8>>> = Default::default();
@@ -198,6 +201,9 @@ impl VirtualTerminal {
                 path.into(),
             ],
         };
+        if pass_stderr {
+            command.push("--pass-stderr".into());
+        }
         if let Some(cmd) = cmd {
             command.push("--".into());
             command.extend(cmd);
