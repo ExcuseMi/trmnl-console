@@ -45,6 +45,11 @@ custom_fields:
     that URL to send output to your device.
   category: custom,productivity
   github_url: https://github.com/theCapypara/trmnl-console
+- keyname: webhook_url
+  field_type: copyable_webhook_url
+  name: Webhook URL
+  description: Use this URL with the `trmnl-console` command.
+  help_text: This will populate once the plugin has been created/saved.
 name: Console / Terminal Output
 description: Display the output of a command
 refresh_interval: 15

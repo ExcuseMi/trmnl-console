@@ -7,7 +7,7 @@
 `trmnl-console` is a TRMNL plugin recipe and command line tool that combined allow you to render any command line output
 on a TRMNL-compatible device.
 
-To get started, fork the [plugin recipe](todo) and install the CLI app.
+To get started, fork or install the [plugin recipe](todo) and install the CLI app.
 
 ## Install the CLI app
 
@@ -18,8 +18,8 @@ To get started, fork the [plugin recipe](todo) and install the CLI app.
    the latest version. Rename it to `trmnl-console`.
 3. Open a terminal and navigate to the directory where you extracted the exe. Make it executable:
    `chmod +x trmnl-console`.
-4. Run `./trmnl-console -w 111 -h 29 --url "https://<your forked plugin webhook URL>" --bar-left "It works!"` to send
-   the demo screen to your plugin.
+4. Run `./trmnl-console -w 111 -h 29 --url "https://<your plugin webhook URL>" --bar-left "It works!"` to send the demo
+   screen to your plugin.
 5. The plugin on TRMNL should now display the demo screen and "It works!" should be displayed on the bottom bar. You are
    now ready to use the plugin.
 
@@ -33,8 +33,8 @@ repository: `nix run 'github:theCapypara/trmnl-console#trmnl-console' -- --help`
    latest version. Rename it to `trmnl-console`.
 3. Open a terminal and navigate to the directory where you extracted the exe. Make it executable:
    `chmod +x trmnl-console`.
-4. Run `./trmnl-console -w 111 -h 29 --url "https://<your forked plugin webhook URL>" --bar-left "It works!"` to send
-   the demo screen to your plugin.
+4. Run `./trmnl-console -w 111 -h 29 --url "https://<your plugin webhook URL>" --bar-left "It works!"` to send the demo
+   screen to your plugin.
 5. The plugin on TRMNL should now display the demo screen and "It works!" should be displayed on the bottom bar. You are
    now ready to use the plugin.
 
@@ -44,8 +44,8 @@ repository: `nix run 'github:theCapypara/trmnl-console#trmnl-console' -- --help`
 2. From the latest release, download the `trmnl-console-X.X.X-x86_64-pc-windows-msvc.exe` executable, where `X.X.X` is
    the latest version. Rename it to `trmnl-console.exe`.
 3. Open the windows terminal and navigate to the directory where you extracted the exe.
-4. Run `.\trmnl-console.exe -w 111 -h 29 --url "https://<your forked plugin webhook URL>" --bar-left "It works!"` to
-   send the demo screen to your plugin.
+4. Run `.\trmnl-console.exe -w 111 -h 29 --url "https://<your plugin webhook URL>" --bar-left "It works!"` to send the
+   demo screen to your plugin.
 5. The plugin on TRMNL should now display the demo screen and "It works!" should be displayed on the bottom bar. You are
    now ready to use the plugin.
 
@@ -84,8 +84,8 @@ terminal that is used to capture the output of the command you want to render.
 
 By default, the command will output the HTML that the plugin would render, see "Advanced Usage".
 
-You instead probably want to send the output to your forked plugin. To do this, pass the `--url <url>` flag with the URL
-of the webhook. This will send the output to the TRMNL servers and render the plugin.
+You instead probably want to send the output to your plugin. To do this, pass the `--url <url>` flag with the URL of the
+webhook. This will send the output to the TRMNL servers and render the plugin.
 
 > [!NOTE]
 > TRMNL enforces size- and rate-limits for webhooks. If your output is too large or you are sending too many requests,
