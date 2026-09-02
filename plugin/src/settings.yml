@@ -6,9 +6,10 @@ static_data: ''
 polling_verb: get
 framework_version: 3.3.1
 serverless_language:
-polling_url: 'https://trmnl.bettens.dev/trmnl-console'
+polling_url: https://trmnl.bettens.dev/trmnl-console
 polling_headers: ''
 polling_body: ''
+id: 465528
 oauth_enabled: 'false'
 oauth_pkce_enabled: 'no'
 oauth_authorize_url: ''
