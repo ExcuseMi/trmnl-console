@@ -2,7 +2,11 @@ watch:
   - .trmnlp.yml
   - src
 
-custom_fields: { }
+# backend_url feeds polling_url ("{{ backend_url }}" in settings.yml) - point it at a local
+# trmnl-console-backend (or anything serving the JSON shapes below) to test polling locally,
+# or leave as-is and set the `data:` variables below directly instead.
+custom_fields:
+  backend_url: "http://127.0.0.1:8901/local-test-id"
 
 variables:
   trmnl:

@@ -6,7 +6,7 @@ static_data: ''
 polling_verb: get
 framework_version: 3.3.1
 serverless_language:
-polling_url: https://trmnl.bettens.dev/trmnl-console/a5a59cf5-91bb-4603-9e75-c3da98a53e0c
+polling_url: "{{ backend_url }}"
 polling_headers: ''
 polling_body: ''
 id: 465528
@@ -43,6 +43,12 @@ custom_fields:
     <a href="https://github.com/theCapypara/trmnl-console" target="_blank">repository</a>.
   category: custom,productivity
   github_url: https://github.com/theCapypara/trmnl-console
+- keyname: backend_url
+  field_type: password
+  name: Backend URL
+  description: Full URL of your self-hosted trmnl-console-backend, id included (e.g. <code>https://your-host/trmnl-console/&lt;id&gt;</code>).<br> This plugin polls it; push to the same URL with trmnl-console-pusher or <code>trmnl-console --url</code>.<br> The id in the URL is the only credential (same model as a TRMNL webhook URL) - that's why this field is masked and never lives in the plugin recipe's source. See <a href="https://github.com/theCapypara/trmnl-console/tree/main/backend" target="_blank">backend/README.md</a>.
+  placeholder: https://your-host/trmnl-console/your-id
+  optional: false
 name: Console / Terminal Output
 description: Display the output of a command
 refresh_interval: 15

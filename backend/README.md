@@ -39,12 +39,12 @@ Then use the *same* URL, `https://your-host/<id>`, in two places:
 
 1. Whatever pushes to it - `trmnl-console --url https://your-host/<id>` or
    [`../pusher/`](../pusher/)'s `webhook_url`.
-2. The plugin recipe's `polling_url` (see `plugin/src/settings.yml`):
-   ```yaml
-   strategy: polling
-   polling_verb: get
-   polling_url: "https://your-host/<id>"
-   ```
+2. The plugin instance's **Backend URL** field, in the TRMNL dashboard (its settings page,
+   the same place a webhook-strategy plugin shows its webhook URL). The recipe
+   (`plugin/src/settings.yml`) sets `polling_url: "{{ backend_url }}"` (custom fields are
+   referenced bare inside `polling_url`, unlike `custom_fields_values.*` in markup templates)
+   and declares that field as `password`-masked - the id-bearing URL is a credential, so it
+   never lives in the plugin recipe's source, only in your own TRMNL account.
 
 ## Config reference (environment variables)
 
