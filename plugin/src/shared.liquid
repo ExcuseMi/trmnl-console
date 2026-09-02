@@ -1430,9 +1430,8 @@
     }
 </style>
 {% assign id_prefix = "tc--" | append_random %}
-<div class="layout layout--left layout--top">
-    <pre class="trmnl-console tc--x{{ data.scale }}"
-         id="{{ id_prefix }}-console">{{ data.content_transformed | raw }}</pre>
+<div class="layout layout--left layout--top" id="{{ id_prefix }}-container">
+    <pre class="trmnl-console" id="{{ id_prefix }}-console"></pre>
 </div>
 {% if data.bar %}
     <div class="title_bar">
@@ -1449,13 +1448,21 @@
         {% endif %}
     </div>
 {% endif %}
-{% if data.content %}
+{% if data.content or data.variants %}
     <!--
-        This decompresses the SBuffer-compressed console data.
-        I would ideally do this serverside using a serverless transform, and even already had that implemented,
-        however unfortunately the output it produces is >5kb, which is the max TRMNL core allows.
+        This decompresses the SBuffer-compressed console data and, when the plugin was fed
+        several size "variants" (see trmnl-console-backend), picks whichever one best fills
+        the screen space actually available here without overflowing it. This is done
+        client-side for two reasons:
+        - a serverless transform's output is capped at 5kb, too small for this data
+          (see _transform.py)
+        - the available screen space is only known once this markup is actually rendered
+          on a device, never at webhook-send time
+        Accepts both payload shapes so a plain `trmnl-console --url` push (single
+        width/scale/content) and a trmnl-console-backend push (bar + several variants)
+        render through the same code path.
     -->
-    <script type="application/sbuffer" id="{{ id_prefix }}-compressed">{{ data.content | raw }}</script>
+    <script type="application/json" id="{{ id_prefix }}-data">{{ data | json }}</script>
     <script type="text/javascript" class="tc--decompress-script">
         /*
          * This converts the custom "SBuffer" (version 1) compressed terminal data
@@ -1691,13 +1698,84 @@
 
         // ---
 
-        const outputPre = document.querySelector("#{{ id_prefix }}-console");
-        const inputSBuffer = document.querySelector("#{{ id_prefix }}-compressed").textContent;
+        /*
+         * Picks the size "variant" that best fills the screen space actually available
+         * here, then renders it. See the comment above the embedded data script for why
+         * this happens client-side.
+         *
+         * Waits for webfonts to finish loading before measuring anything: measuring
+         * against a fallback font while Inter is still swapping in locks in a size that
+         * later overflows once the real font reflows the text (see trmnl skill notes on
+         * this exact failure mode).
+         */
+        function pickAndRenderBestVariant() {
+            const container = document.querySelector("#{{ id_prefix }}-container");
+            const pre = document.querySelector("#{{ id_prefix }}-console");
+            const raw = JSON.parse(document.querySelector("#{{ id_prefix }}-data").textContent);
 
-        outputPre.innerHTML = sbuffer_to_html(inputSBuffer, {{ data.width }});
+            let variants = raw.variants;
+            if (!variants || variants.length === 0) {
+                variants = raw.content ? [{id: "legacy", width: raw.width, scale: raw.scale, content: raw.content}] : [];
+            }
+            if (variants.length === 0) {
+                return;
+            }
 
-        terminalize().then(function () {
-            console.log("screen settled");
+            const containerWidth = container.clientWidth;
+            const containerHeight = container.clientHeight;
+
+            let best = null;
+            let bestOverflow = Infinity;
+            let bestArea = -1;
+
+            for (const variant of variants) {
+                pre.className = "trmnl-console tc--x" + variant.scale;
+                pre.innerHTML = sbuffer_to_html(variant.content, variant.width);
+                const width = pre.scrollWidth;
+                const height = pre.scrollHeight;
+                const overflow = Math.max(0, width - containerWidth) + Math.max(0, height - containerHeight);
+                const area = width * height;
+
+                if (overflow === 0) {
+                    // Among variants that fit, prefer the one using the most of the
+                    // available space (larger scale and/or more columns/rows).
+                    if (bestOverflow > 0 || area > bestArea) {
+                        best = variant;
+                        bestOverflow = 0;
+                        bestArea = area;
+                    }
+                } else if (bestOverflow > 0 && overflow < bestOverflow) {
+                    // Nothing has fit yet; keep the least-overflowing candidate as a
+                    // fallback in case none do.
+                    best = variant;
+                    bestOverflow = overflow;
+                    bestArea = area;
+                }
+            }
+
+            pre.className = "trmnl-console tc--x" + best.scale;
+            pre.innerHTML = sbuffer_to_html(best.content, best.width);
+            if (bestOverflow > 0) {
+                // The best available variant still overflows the screen a little (e.g.
+                // only one size was configured and it doesn't quite match this device) -
+                // clip it instead of spilling into the title bar or off the edge.
+                container.style.overflow = "hidden";
+            }
+        }
+
+        function runAfterFonts(fn) {
+            if (document.fonts && document.fonts.ready) {
+                document.fonts.ready.then(fn).catch(fn);
+            } else {
+                fn();
+            }
+        }
+
+        runAfterFonts(function () {
+            pickAndRenderBestVariant();
+            terminalize().then(function () {
+                console.log("screen settled");
+            });
         });
     </script>
 {% endif %}

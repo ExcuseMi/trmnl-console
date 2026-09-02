@@ -5,14 +5,26 @@ edition = "2024"
 license = "AGPL-3.0"
 repository = "https://github.com/theCapypara/trmnl-console"
 
+[lib]
+name = "trmnl_console"
+path = "src/lib.rs"
+
 [features]
 default = ["preview"]
 preview = ["dep:warp", "dep:open", "dep:liquid", "dep:liquid-core", "dep:regex"]
 
 [dependencies]
-clap = { version = "4.6", features = ["derive"] }
+clap = { version = "4.6", features = ["derive", "env"] }
 shadow-terminal = "0.2"
-tokio = { version = "1.53", features = ["rt-multi-thread"] }
+tokio = { version = "1.53", features = [
+    "rt-multi-thread",
+    "macros",
+    "time",
+    "process",
+    "signal",
+    "io-util",
+    "sync",
+] }
 unicode-normalization = "0.1"
 tempfile = "3.27"
 interprocess = { version = "2.4", features = ["tokio"] }

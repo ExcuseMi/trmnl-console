@@ -1,0 +1,23 @@
+# Any one-shot shell command works as a job - not just tmux/Zellij. This dumps disk usage and
+# system load every 15 minutes with no other setup required.
+#
+# What doesn't fit this model: a *live*, interactively-redrawing TUI (htop, btop, etc.) that
+# needs to be driven inside a real PTY to render correctly and only make sense captured after
+# running for a bit. Use the `trmnl-console` CLI directly for those (see the top-level README's
+# examples), on its own schedule (cron/systemd timer) - trmnl-console-backend's model is a
+# one-shot command whose stdout is captured once per tick, which fits a static dump (tmux/
+# Zellij pane, `df`, `git log`, ...) rather than a redrawing TUI.
+
+webhook_url: "https://usetrmnl.com/api/custom_plugins/YOUR-UUID-HERE"
+
+jobs:
+  - name: system-status
+    command: "echo Load: $(cat /proc/loadavg | cut -d' ' -f1-3); echo; df -h /"
+    interval_seconds: 900
+    bar:
+      left: "system status"
+    sizes:
+      - id: trmnl-og-landscape-x1
+        width: 111
+        height: 29
+        scale: 1

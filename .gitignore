@@ -2,6 +2,7 @@
 .env
 *.zip
 .trmnlp.yml
+backend/backend.yml
 target
 .venv
 _build

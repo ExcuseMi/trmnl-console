@@ -1,19 +1,14 @@
-mod demo;
-mod payload;
-#[cfg(feature = "preview")]
-mod preview_server;
-mod sbuffer;
-mod terminal_subprocess;
-mod virtual_terminal;
-mod webhook;
-
-use crate::virtual_terminal::VirtualTerminal;
 use clap::Parser;
-use std::env;
 use std::io::IsTerminal;
 use std::process::ExitCode;
 use std::time::Duration;
 use tokio::time::timeout;
+use trmnl_console::payload;
+#[cfg(feature = "preview")]
+use trmnl_console::preview_server;
+use trmnl_console::virtual_terminal::VirtualTerminal;
+use trmnl_console::webhook;
+use trmnl_console::{demo, try_run_internal_subprocess};
 
 #[derive(Debug, clap::Parser)]
 #[command(version, about, verbatim_doc_comment, disable_help_flag = true)]
@@ -211,20 +206,25 @@ impl Args {
             OutputMode::HtmlToStdout
         }
     }
+    pub fn build_payload(
+        &self,
+        snapshot: trmnl_console::sbuffer::SBuffer,
+    ) -> payload::WebhookPayload {
+        let bar = payload::WebhookPayloadBar::new(
+            self.bar_left.clone(),
+            self.bar_right.clone(),
+            self.bar_icon.clone(),
+        );
+        payload::make(self.width, self.scale, bar, snapshot)
+    }
 }
 
 const ERR: u8 = 91;
 
 #[tokio::main]
 pub async fn main() -> ExitCode {
-    // check if we are running in the internal mode used for subprocess handling
-    {
-        let mut raw_args = env::args();
-        raw_args.next(); // argv0
-        if Some(terminal_subprocess::INTERNAL_SUBPROCESS_MODE_FLAG) == raw_args.next().as_deref() {
-            return terminal_subprocess::drive_terminal(terminal_subprocess::SubprocArgs::parse())
-                .await;
-        }
+    if let Some(code) = try_run_internal_subprocess().await {
+        return code;
     }
 
     let args = Args::parse();
@@ -302,19 +302,19 @@ pub async fn main() -> ExitCode {
                 0
             }
             OutputMode::JsonToStdout => {
-                serde_json::to_writer_pretty(std::io::stdout(), &payload::make(&args, snapshot))
+                serde_json::to_writer_pretty(std::io::stdout(), &args.build_payload(snapshot))
                     .unwrap();
                 println!();
                 0
             }
             OutputMode::SendToWebhook => {
-                let payload = payload::make(&args, snapshot);
+                let payload = args.build_payload(snapshot);
                 webhook::send_cli(args.url.unwrap(), payload).await as _
             }
             OutputMode::PreviewServer => {
                 #[cfg(feature = "preview")]
                 {
-                    let payload = payload::make(&args, snapshot);
+                    let payload = args.build_payload(snapshot);
                     preview_server::launch(args.height, payload).await as _
                 }
                 #[cfg(not(feature = "preview"))]

@@ -1,0 +1,26 @@
+# Minimal tmux example for trmnl-console-backend.
+#
+# Captures the pane named "main" in a tmux session also named "main" (`tmux new -s main`) every
+# 5 minutes and pushes it to your plugin. `-e` keeps color/formatting escape codes; drop it for
+# plain text. `-p` prints to stdout instead of a tmux buffer.
+#
+# To capture a *specific* pane rather than the active one, target it explicitly, e.g.
+# `tmux capture-pane -t main:0.1 -p -e` (session:window.pane).
+#
+# List your running sessions/panes to find the right target:
+#   tmux list-sessions
+#   tmux list-panes -a -F '#{session_name}:#{window_index}.#{pane_index} #{pane_current_command}'
+
+webhook_url: "https://usetrmnl.com/api/custom_plugins/YOUR-UUID-HERE"
+
+jobs:
+  - name: tmux-main
+    command: "tmux capture-pane -t main -p -e"
+    interval_seconds: 300
+    bar:
+      left: "tmux: main"
+    sizes:
+      - id: trmnl-og-landscape-x1
+        width: 111
+        height: 29
+        scale: 1

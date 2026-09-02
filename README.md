@@ -233,6 +233,17 @@ the commands; you may need to remove when trying it out yourself.
     </tr>
 </table>
 
+## Backend (no manual webhook pushes)
+
+Running `trmnl-console` by hand (or wiring up your own cron job around it) every time you want
+something on your device gets old. [`backend/`](backend/) has `trmnl-console-backend`: a small
+Docker-friendly scheduler that periodically captures a command's output - a tmux/Zellij pane, or
+any other one-shot command - and pushes it for you. Unlike the CLI, it doesn't need `-w/-h` set
+to one specific device: a job captures its command's output at every size you list, sends them
+all in one payload, and the plugin recipe picks whichever one best fits the screen space it's
+actually given at render time. See [`backend/README.md`](backend/README.md) for setup, the
+config reference, and tmux/Zellij examples.
+
 ## Advanced Usage
 
 You can use `trmnl-console --help` to get more advanced usage information and information about the formats used

@@ -1,0 +1,35 @@
+# Zellij example for trmnl-console-backend.
+#
+# IMPORTANT, verified against zellij 0.42: `zellij action dump-screen` (and every other
+# `zellij action` subcommand) only works while a client is actively attached to the target
+# session - unlike tmux, a headless/detached zellij session has nothing to dump ("No client ids
+# in screen found"). This is a real difference from tmux, not a config mistake - if you don't
+# already need zellij specifically, tmux (see tmux.yml in this directory) is the more robust
+# choice for unattended capture.
+#
+# If you do want zellij: keep a client permanently (but invisibly) attached by running it
+# inside its own background tmux pane - this gives zellij the always-on client it needs while
+# staying out of your way:
+#
+#   tmux new-session -d -s zellij-host "zellij attach my-session"
+#
+# (Swap `attach` for `--session my-session` to create it fresh instead of attaching to one you
+# already started interactively.) With that wrapper pane running, capture-pane's target below
+# will actually have content.
+
+webhook_url: "https://usetrmnl.com/api/custom_plugins/YOUR-UUID-HERE"
+
+jobs:
+  - name: zellij-main
+    # dump-screen writes to a file rather than stdout, so this job's `command` writes to one
+    # in /tmp and cats it back out. `-f` includes scrollback; drop it to dump only the visible
+    # screen.
+    command: "zellij --session my-session action dump-screen -f /tmp/trmnl-console-zellij-dump.txt && cat /tmp/trmnl-console-zellij-dump.txt"
+    interval_seconds: 300
+    bar:
+      left: "zellij: my-session"
+    sizes:
+      - id: trmnl-og-landscape-x1
+        width: 111
+        height: 29
+        scale: 1

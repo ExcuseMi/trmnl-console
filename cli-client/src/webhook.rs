@@ -27,59 +27,58 @@ pub async fn send_cli(url: String, payload: WebhookPayload) -> u8 {
         Err(err) => {
             let err_prefix = "trmnl-console: failed updating plugin:\n"
                 .if_supports_color(Stderr, |text| text.red());
-            match err.kind {
-                SendWebhookErrorKind::ClientBuild(err) => {
-                    eprintln!(
-                        "{}could not initialize the HTTP client.\nDetails:\n{}",
-                        err_prefix, err
-                    )
-                }
-                SendWebhookErrorKind::Request(err) => {
-                    eprintln!(
-                        "{}request failure. Did you enter the correct URL?\nDetails:\n{}",
-                        err_prefix, err
-                    )
-                }
-                SendWebhookErrorKind::RequestVolumeLimitReached(err) => {
-                    eprintln!(
-                        "{}reached a limit. You may have sent too many webhooks today.\nSee https://docs.trmnl.com/go/private-plugins/webhooks for limits.\nDetails:\n{}",
-                        err_prefix,
-                        format_err_details(err)
-                    )
-                }
-                SendWebhookErrorKind::RequestSizeLimitReached(err) => {
-                    eprintln!(
-                        "{}reached a limit. Your console output may be too large.\nSee https://docs.trmnl.com/go/private-plugins/webhooks for limits.\nDetails:\n{}",
-                        err_prefix,
-                        format_err_details(err)
-                    )
-                }
-                SendWebhookErrorKind::ServerError(status, err) => {
-                    eprintln!(
-                        "{}server error ({}).\nDetails:\n{}",
-                        err_prefix,
-                        status,
-                        format_err_details(err)
-                    )
-                }
-                SendWebhookErrorKind::ClientError(status, err) => {
-                    eprintln!(
-                        "{}client error ({}).\nDetails:\n{}",
-                        err_prefix,
-                        status,
-                        format_err_details(err)
-                    )
-                }
-                SendWebhookErrorKind::UnknownError(status, err) => {
-                    eprintln!(
-                        "{}error ({}).\nDetails:\n{}",
-                        err_prefix,
-                        status,
-                        format_err_details(err)
-                    )
-                }
-            };
+            eprintln!("{}{}", err_prefix, describe_error(&err.kind));
             90
+        }
+    }
+}
+
+/// Renders a [`SendWebhookErrorKind`] as a human-readable message, without any of the
+/// terminal color codes [`send_cli`] adds for the interactive CLI. Used by
+/// `trmnl-console-backend` to log failures for a scheduled job.
+pub fn describe_error(kind: &SendWebhookErrorKind) -> String {
+    match kind {
+        SendWebhookErrorKind::ClientBuild(err) => {
+            format!("could not initialize the HTTP client.\nDetails:\n{}", err)
+        }
+        SendWebhookErrorKind::Request(err) => {
+            format!(
+                "request failure. Did you enter the correct URL?\nDetails:\n{}",
+                err
+            )
+        }
+        SendWebhookErrorKind::RequestVolumeLimitReached(err) => {
+            format!(
+                "reached a limit. You may have sent too many webhooks today.\nSee https://docs.trmnl.com/go/private-plugins/webhooks for limits.\nDetails:\n{}",
+                format_err_details(err.clone())
+            )
+        }
+        SendWebhookErrorKind::RequestSizeLimitReached(err) => {
+            format!(
+                "reached a limit. Your console output may be too large.\nSee https://docs.trmnl.com/go/private-plugins/webhooks for limits.\nDetails:\n{}",
+                format_err_details(err.clone())
+            )
+        }
+        SendWebhookErrorKind::ServerError(status, err) => {
+            format!(
+                "server error ({}).\nDetails:\n{}",
+                status,
+                format_err_details(err.clone())
+            )
+        }
+        SendWebhookErrorKind::ClientError(status, err) => {
+            format!(
+                "client error ({}).\nDetails:\n{}",
+                status,
+                format_err_details(err.clone())
+            )
+        }
+        SendWebhookErrorKind::UnknownError(status, err) => {
+            format!(
+                "error ({}).\nDetails:\n{}",
+                status,
+                format_err_details(err.clone())
+            )
         }
     }
 }
@@ -102,25 +101,20 @@ fn format_err_details(err: String) -> String {
 }
 
 pub async fn send(url: String, payload: WebhookPayload) -> Result<(), SendWebhookError> {
-    let client = match reqwest::Client::builder().user_agent(USER_AGENT).build() {
-        Ok(client) => client,
-        Err(err) => {
-            return Err(SendWebhookError {
-                was_metadata_sent: false,
-                kind: SendWebhookErrorKind::ClientBuild(err),
-            });
-        }
-    };
+    let client = build_client().map_err(|kind| SendWebhookError {
+        was_metadata_sent: false,
+        kind,
+    })?;
 
     let (metadata_payload, content_payload) = payload.into_webhook_parts();
 
-    if let Err(err) = send_single_payload(&client, &url, metadata_payload).await {
+    if let Err(err) = send_json(&client, &url, metadata_payload).await {
         return Err(SendWebhookError {
             was_metadata_sent: false,
             kind: err,
         });
     }
-    if let Err(err) = send_single_payload(&client, &url, content_payload).await {
+    if let Err(err) = send_json(&client, &url, content_payload).await {
         return Err(SendWebhookError {
             was_metadata_sent: true,
             kind: err,
@@ -130,7 +124,31 @@ pub async fn send(url: String, payload: WebhookPayload) -> Result<(), SendWebhoo
     Ok(())
 }
 
-async fn send_single_payload(
+/// Sends a single already-built webhook JSON body (e.g. from
+/// [`crate::payload::WebhookPayloadDataMulti::into_webhook`]) in one request, without the
+/// CLI's metadata/content split. Used by `trmnl-console-backend`, which sends one payload
+/// per job tick.
+pub async fn send_one(url: String, payload: Value) -> Result<(), SendWebhookError> {
+    let client = build_client().map_err(|kind| SendWebhookError {
+        was_metadata_sent: false,
+        kind,
+    })?;
+    send_json(&client, &url, payload)
+        .await
+        .map_err(|kind| SendWebhookError {
+            was_metadata_sent: false,
+            kind,
+        })
+}
+
+fn build_client() -> Result<Client, SendWebhookErrorKind> {
+    reqwest::Client::builder()
+        .user_agent(USER_AGENT)
+        .build()
+        .map_err(SendWebhookErrorKind::ClientBuild)
+}
+
+async fn send_json(
     client: &Client,
     url: &String,
     payload: Value,

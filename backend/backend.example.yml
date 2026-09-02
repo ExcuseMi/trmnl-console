@@ -1,0 +1,68 @@
+# Reference config for trmnl-console-backend. Copy this to backend.yml (gitignored - it will
+# contain your webhook URL) and edit it, or point --config / TRMNL_CONSOLE_BACKEND_CONFIG at a
+# copy anywhere else. See backend/README.md and backend/examples/ for focused tmux/Zellij setups.
+
+# Default webhook URL for jobs that don't set their own `webhook_url`. Find this on your
+# private plugin's instance settings page (the "Webhook URL" field) - see the top-level
+# README's "Install the CLI app" step, same URL either way.
+webhook_url: "https://usetrmnl.com/api/custom_plugins/YOUR-UUID-HERE"
+
+jobs:
+  # Every job captures `command`'s stdout once per tick and sends it as one webhook payload
+  # containing all of `sizes` as "variants" - the plugin recipe picks whichever one best fits
+  # the screen space it actually has (see plugin/src/shared.liquid). This means you don't have
+  # to tell it which TRMNL device/orientation/scale you're using; it works it out at render time.
+  - name: tmux-main
+    # Any shell command works, not just tmux/Zellij - anything that dumps text to stdout and
+    # exits works here. For a live TUI that needs to be driven interactively in a real PTY
+    # (e.g. `htop`), use the `trmnl-console` CLI directly instead - see the top-level README.
+    command: "tmux capture-pane -t main -p -e"
+    # Seconds between runs. TRMNL allows up to 12 webhooks/hour (30/hour on TRMNL+) - keep
+    # this at 300 (5 min) or higher unless you're on TRMNL+.
+    interval_seconds: 300
+    # Uncomment to send this job's payload somewhere other than the top-level webhook_url:
+    # webhook_url: "https://usetrmnl.com/api/custom_plugins/ANOTHER-UUID"
+    # Also feed the command's stderr into the captured terminal (like the CLI's --pass-stderr).
+    pass_stderr: false
+    # How long to let each size's virtual terminal settle after the captured bytes have all
+    # been fed in, before taking the snapshot. 2s is enough for a one-shot dump like
+    # `tmux capture-pane`; raise it if `command` itself is slow to produce output.
+    wait_time_seconds: 2.0
+    bar:
+      left: "tmux: main"
+      right: null
+      icon: null
+    # Sizes to capture and send as variants. This can be omitted entirely to use the full
+    # device table from the top-level README's "Devices" section - but that sends up to 10
+    # variants in one payload, which risks exceeding TRMNL's webhook size limit (2kb, 5kb on
+    # TRMNL+) for anything but sparse output. Listing only the device(s) you actually own (as
+    # below) keeps the payload small and leaves headroom for real content.
+    sizes:
+      - id: trmnl-og-landscape-x1
+        width: 111
+        height: 29
+        scale: 1
+      - id: trmnl-x-portrait-x1
+        width: 108
+        height: 69
+        scale: 1
+    # If the encoded payload is still over this many bytes after dropping the largest size
+    # variants to try to fit, it's sent anyway (TRMNL will reject it with a clear error in the
+    # log). 2000 is TRMNL's free-tier limit; raise to 5000 if you're on TRMNL+.
+    max_payload_bytes: 2000
+
+  # A second job, on its own schedule, sharing the top-level webhook_url's plugin instance.
+  # merge_variables replaces plugin content wholesale per payload, so two jobs pointed at the
+  # SAME instance will overwrite each other - give each job pushing to the same instance
+  # something that makes sense to show together, or (more commonly) point each job at its own
+  # plugin instance's `webhook_url` instead.
+  - name: disk-usage
+    command: "df -h /"
+    interval_seconds: 900
+    bar:
+      left: "disk usage"
+    sizes:
+      - id: trmnl-og-landscape-x1
+        width: 111
+        height: 29
+        scale: 1

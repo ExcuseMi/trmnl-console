@@ -209,6 +209,7 @@ fn handle_render(
             liquid::ParserBuilder::with_stdlib()
                 .filter(filter::append_random::AppendRandom)
                 .filter(filter::raw::Raw)
+                .filter(filter::json::Json)
                 .build()?
                 .parse(&pass1)?
                 .render(globals.as_object().unwrap())

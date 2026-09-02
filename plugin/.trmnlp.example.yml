@@ -7,7 +7,11 @@ custom_fields: { }
 variables:
   trmnl:
     is_trmnlp: true
-  # add webhook content to simulate in your own .trmnlp.yml here:
+  # add webhook content to simulate in your own .trmnlp.yml here.
+  # Two shapes are accepted (see plugin/src/shared.liquid) - use whichever one matches what
+  # you're testing:
+
+  # 1. Single-size, as sent by `trmnl-console --url` (or --json, see its output):
   data:
     width: 111
     scale: 1
@@ -15,4 +19,21 @@ variables:
       left: left
       right: right
       icon: ...
-    content: ""  # add the output of trmnl-console --sbuffer-json here.
+    content: ""  # add the output of trmnl-console --json's data.content here.
+
+  # 2. Multiple size "variants", as sent by trmnl-console-backend (see backend/README.md).
+  #    The plugin picks whichever variant best fits the screen space it actually has.
+  # data:
+  #   bar:
+  #     left: left
+  #     right: right
+  #     icon: ...
+  #   variants:
+  #     - id: trmnl-og-landscape-x1
+  #       width: 111
+  #       scale: 1
+  #       content: ""
+  #     - id: trmnl-x-portrait-x1
+  #       width: 108
+  #       scale: 1
+  #       content: ""

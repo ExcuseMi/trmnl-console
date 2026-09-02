@@ -1,14 +1,23 @@
 //! TRMNL webhook payload
 
-use crate::Args;
 use crate::sbuffer::SBuffer;
 use serde::Serialize;
 use serde_json::json;
 
 #[inline]
-pub fn make(args: &Args, snapshot: SBuffer) -> WebhookPayload {
+pub fn make(
+    width: u16,
+    scale: u8,
+    bar: Option<WebhookPayloadBar>,
+    snapshot: SBuffer,
+) -> WebhookPayload {
     WebhookPayload {
-        data: WebhookPayloadData::new(args, snapshot),
+        data: WebhookPayloadData {
+            width,
+            scale,
+            bar,
+            content: snapshot.to_string(),
+        },
     }
 }
 
@@ -62,17 +71,6 @@ pub struct WebhookPayloadData {
     pub content: String,
 }
 
-impl WebhookPayloadData {
-    pub fn new(args: &Args, snapshot: SBuffer) -> Self {
-        Self {
-            width: args.width,
-            scale: args.scale,
-            bar: WebhookPayloadBar::new(args),
-            content: snapshot.to_string(),
-        }
-    }
-}
-
 #[derive(Debug, Clone, Serialize)]
 pub struct WebhookPayloadBar {
     pub left: Option<String>,
@@ -81,15 +79,49 @@ pub struct WebhookPayloadBar {
 }
 
 impl WebhookPayloadBar {
-    pub fn new(args: &Args) -> Option<Self> {
-        if args.bar_left.is_none() && args.bar_right.is_none() && args.bar_icon.is_none() {
+    pub fn new(left: Option<String>, right: Option<String>, icon: Option<String>) -> Option<Self> {
+        if left.is_none() && right.is_none() && icon.is_none() {
             None
         } else {
-            Some(Self {
-                left: args.bar_left.clone(),
-                right: args.bar_right.clone(),
-                icon: args.bar_icon.clone(),
-            })
+            Some(Self { left, right, icon })
         }
+    }
+}
+
+/// One rendering of a capture at a specific terminal size, as sent by
+/// `trmnl-console-backend`. Several of these may be sent in a single webhook payload
+/// (see [`WebhookPayloadDataMulti`]) so that the plugin can pick the one that best fits
+/// whatever screen space it is actually given, without the sender having to know that
+/// size in advance.
+#[derive(Debug, Clone, Serialize)]
+pub struct WebhookPayloadVariant {
+    /// Arbitrary identifier for this size, e.g. `"trmnl-og-landscape-x1"`. Only used for
+    /// logging/debugging on the sending side; the plugin does not match on it.
+    pub id: String,
+    pub width: u16,
+    pub scale: u8,
+    pub content: String,
+}
+
+/// Webhook payload shape sent by `trmnl-console-backend`: a shared bottom bar plus a set
+/// of size variants, as opposed to the single-size [`WebhookPayloadData`] the CLI sends
+/// with `--url`. Both shapes are accepted by the same plugin recipe (see
+/// `plugin/src/shared.liquid`).
+#[derive(Debug, Clone, Serialize)]
+pub struct WebhookPayloadDataMulti {
+    pub bar: Option<WebhookPayloadBar>,
+    pub variants: Vec<WebhookPayloadVariant>,
+}
+
+impl WebhookPayloadDataMulti {
+    pub fn into_webhook(self) -> serde_json::Value {
+        json!({
+            "merge_variables": {
+                "data": {
+                    "bar": self.bar,
+                    "variants": self.variants
+                }
+            }
+        })
     }
 }
